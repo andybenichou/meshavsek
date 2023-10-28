@@ -1,5 +1,7 @@
 import csv
+import os
 from collections import defaultdict
+from datetime import datetime
 from itertools import cycle
 
 from openpyxl import load_workbook
@@ -48,7 +50,8 @@ missings = {
 }
 
 # Define the days
-week_days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+week_days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday',
+             'Thursday', 'Friday', 'Saturday']
 
 
 # Helper function to check if a guard is available
@@ -96,7 +99,8 @@ def is_guard_available(watch_list, guard, day_prop, time_prop, days_prop):
 
 # Helper function to get the next available guard
 def get_next_available_guard(watch_list, guard_cycle_prop, used_guards_prop,
-                             day_prop, time_prop, days_prop, current_guard=None):
+                             day_prop, time_prop, days_prop,
+                             current_guard=None):
     if current_guard is not None:
         index = guards_list.index(current_guard)
         buff_cycle = cycle(guards_list[index:] + guards_list[:index])
@@ -106,7 +110,8 @@ def get_next_available_guard(watch_list, guard_cycle_prop, used_guards_prop,
     while True:
         guard = next(buff_cycle)
         if guard not in used_guards_prop \
-                and is_guard_available(watch_list, guard, day_prop, time_prop, days_prop):
+                and is_guard_available(watch_list, guard, day_prop, time_prop,
+                                       days_prop):
             duo = next((d for d in duos if guard in d), None)
             if duo:
                 partner = duo[0] if duo[1] == guard else duo[1]
@@ -114,10 +119,21 @@ def get_next_available_guard(watch_list, guard_cycle_prop, used_guards_prop,
                     continue
 
                 elif partner not in used_guards_prop \
-                        and is_guard_available(watch_list, partner, day_prop, time_prop, days_prop):
+                        and is_guard_available(watch_list, partner, day_prop,
+                                               time_prop, days_prop):
                     return guard, partner
             else:
                 return guard, None
+
+
+def getTodayDayOfWeek():
+    # Get the current date
+    today = datetime.today()
+
+    # Get the name of the day of the week
+    day_name = today.strftime("%A")
+
+    return day_name
 
 
 def getDays(watch_list):
@@ -135,6 +151,9 @@ def getDays(watch_list):
 
         if last_day == day:
             continue
+
+    if not last_day:
+        last_day = getTodayDayOfWeek()
 
     days_list.append(last_day)
 
@@ -158,7 +177,8 @@ def getWatchListData(watch_list, days_prop):
             hour = int(time[:2])
 
             if (days_prop.index(day) == 0 and hour < 2) or \
-                    (days_prop.index(day) == len(days_prop) - 1 and hour >= 20):
+                    (days_prop.index(day) == len(days_prop) - 1
+                     and hour >= 20):
                 continue
 
             used_guards = []
@@ -191,8 +211,7 @@ def getWatchListData(watch_list, days_prop):
                                 slot_day = days_prop[day_index - 1]
 
                         guards = \
-                            watch_list[slot_day][f'{((hour - 1) % 24):02d}00'][
-                                point]
+                            watch_list[slot_day][f'{((hour - 1) % 24):02d}00'][point]
 
                 if not guards and need_guard_point:
                     guard1, guard2 = get_next_available_guard(watch_list,
@@ -285,7 +304,8 @@ def formatExcel(df, worksheet):
                     start_row = row_num
                     start_content = content
 
-    # Adjust the column width according to content, wrap text, and center align text
+    # Adjust the column width according to content, wrap text, and center align
+    # text
     for col in worksheet.columns:
         max_length = 0
         column = [cell for cell in col]
@@ -293,8 +313,10 @@ def formatExcel(df, worksheet):
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
+
+                # Set wrap text and center alignment
                 cell.alignment = Alignment(wrap_text=True, horizontal='center',
-                                           vertical='center')  # Set wrap text and center alignment
+                                           vertical='center')
             except:
                 pass
         adjusted_width = (max_length + 2)
@@ -319,10 +341,18 @@ def exportToExcel(file_name, watch_list, days_prop):
 if __name__ == '__main__':
     # Initialize the watch list
     wl = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-    wl = getData('old', wl, guards_list, guard_points)
+
+    old_file_name = 'old'
+    src_dir = os.path.dirname(os.path.abspath(__file__))
+    old_dir = os.path.join(src_dir, f'{old_file_name}.xlsx')
+
+    if os.path.exists(old_dir):
+        wl = getData(old_file_name, wl, guards_list, guard_points)
 
     days = getDays(wl)
 
     wl = getWatchListData(wl, days)
 
     exportToExcel('watch_list', wl, days)
+
+    print('Shivshakta!')

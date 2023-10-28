@@ -3,8 +3,8 @@ from collections import defaultdict
 import pandas as pd
 
 
-def find_guards(watch_list, guards_list_prop, guard_points_prop, days, day_prop,
-                hour_prop, point_prop, row_prop):
+def find_guards(watch_list, guards_list_prop, guard_points_prop, days,
+                day_prop, hour_prop, point_prop, row_prop):
     # First hour of the slot
     if pd.notna(row_prop[point_prop]):
         found_guards = row_prop[point_prop].split('\n')
@@ -75,16 +75,9 @@ def getData(file_name, watch_list, guards_list_prop, guard_points_prop):
         hour_str = row['Hour'].strftime('%H%M')
 
         for p in guard_points_prop.keys():
-            guards = find_guards(watch_list, guards_list_prop, guard_points_prop,
-                                 days, day, int(hour_str[:2]), p, row)
+            guards = find_guards(watch_list, guards_list_prop,
+                                 guard_points_prop, days, day,
+                                 int(hour_str[:2]), p, row)
             watch_list[day][hour_str][p] = guards
 
     return watch_list
-
-
-# if __name__ == '__main__':
-#     # Initialize the watch list
-#     wl = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
-#
-#     wl, days = getData('Sheet', wl, guards_list, guard_points)
-#     exportToExcel('previous_watch_list', wl, days)
