@@ -39,6 +39,8 @@ guards_list = ['Andy', 'Saspo', 'David', 'Sauveur', 'Lotem', 'Enzo',
 duos = [('Andy', 'Saspo')]
 
 # List of missing guards each day
+# For now the missing guards are only from 12 to 14 the next day.
+# TODO: Make a missing constraint by hours
 missings = {
     'Sunday': ['Guetta'],
     'Monday': ['Solal'],
