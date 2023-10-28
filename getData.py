@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 import pandas as pd
 
 
@@ -31,7 +29,7 @@ def find_guards(watch_list, guards_list_prop, guard_points_prop, days,
             for h in range(beginning, g_end):
                 slot_d = day_prop
                 if beginning < hour_prop < g_end:
-                    if hour_prop < 24:
+                    if hour_prop >= 24:
                         day_i = days.index(day_prop)
 
                         if day_i > 0:
@@ -69,7 +67,7 @@ def getData(file_name, watch_list, guards_list_prop, guard_points_prop):
     # Iterate through the rows
     day = None
     for index, row in df.iterrows():
-        if day is None and pd.notna(row['Day']):
+        if (day is None or day != row['Day']) and pd.notna(row['Day']):
             day = row['Day']
 
         hour_str = row['Hour'].strftime('%H%M')

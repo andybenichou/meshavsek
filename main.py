@@ -141,31 +141,32 @@ def getTodayDayOfWeek():
 def getDays(watch_list):
     days_num = int(input("How many days do you need to schedule? "))
     # days_num = 3
-    days_list = list()
-    last_day = None
+    days_list = list(watch_list.keys()) if watch_list.keys() else getTodayDayOfWeek()
 
-    for day in list(watch_list.keys()):
-        for time in sorted(set([f'{hour:02d}00' for hour in range(24)])):
-            for point in guard_points:
-                if watch_list[day][time][point]:
-                    last_day = day
-                    break
+    # for day in list(watch_list.keys()):
+    #     for time in sorted(set([f'{hour:02d}00' for hour in range(24)])):
+    #         for point in guard_points:
+    #             if watch_list[day][time][point]:
+    #                 last_day = day
+    #                 break
+    #
+    #     if last_day == day:
+    #         continue
 
-        if last_day == day:
-            continue
-
-    if not last_day:
-        last_day = getTodayDayOfWeek()
-
-    days_list.append(last_day)
+    # if not days_list:
+    #     last_day = getTodayDayOfWeek()
 
     days_cycle = cycle(week_days)
     day = next(days_cycle)
-    while last_day != day:
+    while days_list[-1] != day:
         day = next(days_cycle)
 
     for _ in range(days_num):
         day = next(days_cycle)
+
+        if day in days_list:
+            break
+
         days_list.append(day)
 
     return days_list
@@ -188,7 +189,10 @@ def getWatchListData(watch_list, days_prop):
                 if watch_list[day][time][point]:
                     continue
 
-                guards = None
+                guards = watch_list[day][time][point] if watch_list[day][time][point] else None
+
+                if guards:
+                    used_guards.extend([g for g in guards if g])
 
                 need_guard_point = False
                 for slot in guard_points[point]:
