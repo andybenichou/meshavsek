@@ -136,8 +136,14 @@ def getTodayDayOfWeek():
 
 
 def getDays(watch_list):
-    days_num = int(input("How many days do you need to schedule? "))
-    # days_num = 3
+    user_input = input("How many days do you need to schedule? ")
+    while True:
+        if user_input.isdigit():
+            days_num = int(user_input)
+            break
+        else:
+            user_input = input("Please enter a valid integer. ")
+
     days_list = list(watch_list.keys()) if watch_list.keys() else getTodayDayOfWeek()
     days_cycle = cycle(week_days)
 
