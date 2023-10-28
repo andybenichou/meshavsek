@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import pandas as pd
 
 
@@ -8,9 +10,13 @@ def find_guards(watch_list, guards_list_prop, guard_points_prop, days,
         found_guards = row_prop[point_prop].split('\n')
 
         for g in found_guards:
-            if g in guards_list_prop:
-                guards_list_prop.remove(g)
-                guards_list_prop.append(g)
+            stripped_g = g.strip()
+            if stripped_g in guards_list_prop:
+                guards_list_prop.remove(stripped_g)
+                guards_list_prop.append(stripped_g)
+
+            else:
+                print(stripped_g)
 
         return row_prop[point_prop].split('\n')
 
@@ -32,8 +38,11 @@ def find_guards(watch_list, guards_list_prop, guard_points_prop, days,
                     if hour_prop >= 24:
                         day_i = days.index(day_prop)
 
-                        if day_i > 0:
-                            slot_d = days[day_i - 1]
+                        if day_i < len(days) - 1:
+                            slot_d = days[day_i + 1]
+
+                        else:
+                            break
 
                 guards_slot = watch_list[slot_d][f'{h % 24:02d}00'][point_prop]
 
@@ -64,6 +73,9 @@ def getData(file_name, watch_list, guards_list_prop, guard_points_prop):
 
     days = getDays(df)
 
+    for d in days:
+        watch_list[d] = defaultdict(lambda: defaultdict(list))
+
     # Iterate through the rows
     day = None
     for index, row in df.iterrows():
@@ -76,6 +88,7 @@ def getData(file_name, watch_list, guards_list_prop, guard_points_prop):
             guards = find_guards(watch_list, guards_list_prop,
                                  guard_points_prop, days, day,
                                  int(hour_str[:2]), p, row)
+
             watch_list[day][hour_str][p] = guards
 
     return watch_list

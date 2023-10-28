@@ -24,31 +24,28 @@ guard_points = {
 }
 
 # List of guards
-guards_list = ['Andy', 'Saspo', 'David', 'Sauveur', 'Lotem', 'Enzo',
-               'Benichou', 'Guetta', 'סיני', 'רווה', 'דוד', 'אנדי', 'אגומס', 'שמעון', 'דובר',
-               'כלפה', 'ליאור', 'אנזו', 'דורון', 'משה', 'משה החופל', 'אסף',
-               'ארד', 'אלכסיי', 'ניסנוב', 'עמיחי', 'לוטם', 'שגיא', 'נפמן',
-               'סדון', 'מטמוני', 'דימנטמן', 'לואיס', 'אבנר', 'יונג', 'כהן',
-               'דותן', 'Sinai', 'Yoni', 'Noe', 'Ben', 'Daboush',
-               'Dael', 'Moshe', 'Alex', 'Noa', 'Alisa', 'Dana', 'Attia', 'Dan',
-               'Elliot', 'Ilan', 'Lea', 'Celine', 'Jason', 'Leon', 'Shana',
-               'Helena', 'Jeremy', 'Yoel', 'Leo', 'Yona', 'Serguei', 'Alexei',
-               'Nora', 'Sanson', 'Serge', 'Solal', 'Elsa', 'Carla']
+guards_list = ['יואל', 'ליאור', 'אבנר', 'משה', 'יונג', 'דורון',
+               'רוני', 'אסרף', 'שגיא', 'אנדי', 'דוד', 'אנזו', 'לישי',
+               'דימנטמן', 'איתי כהן', 'דעאל', 'אגומס', 'מטמוני', 'ניסנוב',
+               'אור', 'עמיחי', 'לוטם', 'שרעבי', 'לואיס', 'דובר', 'שראל',
+               'אלכסיי', 'דבוש', 'דותן', 'אסף', 'דמיטרי', 'רווה', 'כלפה',
+               'לומיאנסקי', 'נפמן', 'סדון', 'סיני', 'שמעון', 'פיאצה',
+               'קריספין', 'ארד', 'שבצוב', 'משה החופל']
 
 # List of duos
-duos = [('Andy', 'Saspo')]
+duos = [('אנדי', 'דוד'), ('דימנטמן', 'מטמוני')]
 
 # List of missing guards each day
 # For now the missing guards are only from 12 to 14 the next day.
 # TODO: Make a missing constraint by hours
 missings = {
-    'Sunday': ['Guetta'],
-    'Monday': ['Solal'],
-    'Tuesday': ['Elsa'],
-    'Wednesday': list(),
-    'Thursday': list(),
-    'Friday': list(),
-    'Saturday': list()
+    'Sunday': [],
+    'Monday': [],
+    'Tuesday': [],
+    'Wednesday': [],
+    'Thursday': [],
+    'Friday': [],
+    'Saturday': []
 }
 
 # Define the days
@@ -105,7 +102,7 @@ def get_next_available_guard(watch_list, guard_cycle_prop, used_guards_prop,
                              current_guard=None):
     if current_guard is not None:
         index = guards_list.index(current_guard)
-        buff_cycle = cycle(guards_list[index:] + guards_list[:index])
+        buff_cycle = cycle(guards_list[index + 1:] + guards_list[:index + 1])
     else:
         buff_cycle = guard_cycle_prop
 
@@ -142,21 +139,8 @@ def getDays(watch_list):
     days_num = int(input("How many days do you need to schedule? "))
     # days_num = 3
     days_list = list(watch_list.keys()) if watch_list.keys() else getTodayDayOfWeek()
-
-    # for day in list(watch_list.keys()):
-    #     for time in sorted(set([f'{hour:02d}00' for hour in range(24)])):
-    #         for point in guard_points:
-    #             if watch_list[day][time][point]:
-    #                 last_day = day
-    #                 break
-    #
-    #     if last_day == day:
-    #         continue
-
-    # if not days_list:
-    #     last_day = getTodayDayOfWeek()
-
     days_cycle = cycle(week_days)
+
     day = next(days_cycle)
     while days_list[-1] != day:
         day = next(days_cycle)
@@ -357,8 +341,11 @@ if __name__ == '__main__':
 
     days = getDays(wl)
 
+    for d in days:
+        wl[d] = defaultdict(lambda: defaultdict(list))
+
     wl = getWatchListData(wl, days)
 
     exportToExcel('watch_list', wl, days)
 
-    print('Shivshakta!')
+    print('Shivsakta!')
