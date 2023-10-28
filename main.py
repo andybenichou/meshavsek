@@ -121,7 +121,7 @@ def get_next_available_guard(watch_list, guard_cycle_prop, used_guards_prop,
 
 
 def getDays(watch_list):
-    days_num = input("How many days do you need to schedule?")
+    days_num = int(input("How many days do you need to schedule? "))
     # days_num = 3
     days_list = list()
     last_day = None
