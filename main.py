@@ -14,8 +14,8 @@ from getData import get_data
 
 RANDOMNESS_LEVEL = 5
 
-# Define the guard points and their time slots
-guard_points = {
+# Define the guard spots and their time slots
+guard_spots = {
     'Entrance': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
                  '1400-1700', '1700-2000', '2000-2300', '2300-0200'],
     'Rear': ['0200-0500', '0500-0800', '0800-1100', '1100-1400', '1400-1700',
@@ -115,9 +115,9 @@ def is_guard_available(watch_list, guard, day_prop, time_prop, days_prop, test=F
         if not updated_day:
             break
 
-        # Check if the guard already in another point
-        for p in guard_points:
-            for t in guard_points[p]:
+        # Check if the guard already in another spot
+        for p in guard_spots:
+            for t in guard_spots[p]:
                 beginning_str, g_end_str = t.split('-')
                 beginning, g_end = map(int, [beginning_str[:2], g_end_str[:2]])
 
@@ -237,16 +237,16 @@ def get_days(watch_list):
     return days_list
 
 
-def get_already_filled_guard_slot(watch_list, day, time, hour, point,
+def get_already_filled_guard_slot(watch_list, day, time, hour, spot,
                                   days_prop):
-    guards = watch_list[day][time][point] if watch_list[day][time][point] else list()
-    fill_guard_point = False
+    guards = watch_list[day][time][spot] if watch_list[day][time][spot] else list()
+    fill_guard_spot = False
 
-    # Point already filled
+    # Spot already filled
     if len(guards) == 2:
-        return guards, fill_guard_point
+        return guards, fill_guard_spot
 
-    for slot in guard_points[point]:
+    for slot in guard_spots[spot]:
         # Fill the actual hour with the slot guards if there are
         # already in one of the slot hour
         start_str, end_str = slot.split('-')
@@ -259,7 +259,7 @@ def get_already_filled_guard_slot(watch_list, day, time, hour, point,
                 hour += 24
 
         if start <= hour < end:
-            fill_guard_point = True
+            fill_guard_spot = True
 
         if start < hour < end:
             slot_day = day
@@ -269,22 +269,22 @@ def get_already_filled_guard_slot(watch_list, day, time, hour, point,
                 if day_index > 0:
                     slot_day = days_prop[day_index - 1]
 
-            guards = watch_list[slot_day][f'{((hour - 1) % 24):02d}00'][point]
+            guards = watch_list[slot_day][f'{((hour - 1) % 24):02d}00'][spot]
 
-    return guards, fill_guard_point
+    return guards, fill_guard_spot
 
 
-def get_guards(watch_list, guard_cycle, day, time, hour, point,
+def get_guards(watch_list, guard_cycle, day, time, hour, spot,
                days_prop):
-    guards, fill_guard_point = \
+    guards, fill_guard_spot = \
         get_already_filled_guard_slot(watch_list,
-                                      day, time, hour, point,
+                                      day, time, hour, spot,
                                       days_prop)
 
     if len(guards) == 2:
         return guards
 
-    if fill_guard_point:
+    if fill_guard_spot:
         guard1, guard2 = get_next_available_guard(watch_list,
                                                   guard_cycle,
                                                   day,
@@ -323,12 +323,12 @@ def get_watch_list_data(watch_list, days_prop):
                      and hour >= 20):
                 continue
 
-            for point in guard_points:
+            for spot in guard_spots:
                 guards = get_guards(watch_list, guard_cycle,
-                                    day, time, hour, point, days_prop)
+                                    day, time, hour, spot, days_prop)
 
-                if len(guards) == 2 and not watch_list[day][time][point]:
-                    watch_list[day][time][point].extend(guards)
+                if len(guards) == 2 and not watch_list[day][time][spot]:
+                    watch_list[day][time][spot].extend(guards)
 
     return watch_list
 
@@ -343,15 +343,15 @@ def export_to_CSV(watch_list, days_prop):
                 time = f'{hour:02d}00'
                 row = [day, time]
 
-                for point in guard_points.keys():
-                    guards_str = '\n'.join(watch_list[day][time][point]) \
-                        if watch_list[day][time][point] else ' '
+                for spot in guard_spots.keys():
+                    guards_str = '\n'.join(watch_list[day][time][spot]) \
+                        if watch_list[day][time][spot] else ' '
                     row.append(guards_str)
                 csvwriter.writerow(row)
 
 
 def get_excel_data_frame(watch_list, days_prop):
-    columns = ['Day', 'Time'] + list(guard_points.keys())
+    columns = ['Day', 'Time'] + list(guard_spots.keys())
     data = list()
 
     for day in days_prop:
@@ -364,9 +364,9 @@ def get_excel_data_frame(watch_list, days_prop):
             time_for_excel = f'{hour:02d}:00'  # formatted for Excel
             row = [day, time_for_excel]
 
-            for point in guard_points.keys():
-                guards_str = '\n'.join(watch_list[day][time][point]) if \
-                    watch_list[day][time][point] else ' '
+            for spot in guard_spots.keys():
+                guards_str = '\n'.join(watch_list[day][time][spot]) if \
+                    watch_list[day][time][spot] else ' '
                 row.append(guards_str)
             data.append(row)
 
@@ -446,7 +446,7 @@ if __name__ == '__main__':
     old_dir = os.path.join(src_dir, f'{old_file_name}.xlsx')
 
     if os.path.exists(old_dir):
-        wl = get_data(old_file_name, wl, guards_list, guard_points)
+        wl = get_data(old_file_name, wl, guards_list, guard_spots)
 
     days = get_days(wl)
 

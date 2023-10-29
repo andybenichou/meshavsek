@@ -3,11 +3,11 @@ from collections import defaultdict
 import pandas as pd
 
 
-def find_guards(watch_list, guards_list_prop, guard_points_prop, days,
-                day_prop, hour_prop, point_prop, row_prop):
+def find_guards(watch_list, guards_list_prop, guard_spots_prop, days,
+                day_prop, hour_prop, spot_prop, row_prop):
     # First hour of the slot
-    if pd.notna(row_prop[point_prop]):
-        found_guards = row_prop[point_prop].split('\n')
+    if pd.notna(row_prop[spot_prop]):
+        found_guards = row_prop[spot_prop].split('\n')
 
         for g in found_guards:
             stripped_g = g.strip()
@@ -18,10 +18,10 @@ def find_guards(watch_list, guards_list_prop, guard_points_prop, days,
             else:
                 print(stripped_g)
 
-        return row_prop[point_prop].split('\n')
+        return row_prop[spot_prop].split('\n')
 
     # Find in already filled hours of the slot
-    for slot in guard_points_prop[point_prop]:
+    for slot in guard_spots_prop[spot_prop]:
         beginning_str, g_end_str = slot.split('-')
         beginning, g_end = map(int, [beginning_str[:2], g_end_str[:2]])
 
@@ -44,7 +44,7 @@ def find_guards(watch_list, guards_list_prop, guard_points_prop, days,
                         else:
                             break
 
-                guards_slot = watch_list[slot_d][f'{h % 24:02d}00'][point_prop]
+                guards_slot = watch_list[slot_d][f'{h % 24:02d}00'][spot_prop]
 
                 if guards_slot:
                     return guards_slot
@@ -54,16 +54,22 @@ def find_guards(watch_list, guards_list_prop, guard_points_prop, days,
 
 def get_days(df):
     days = list()
+    last_day = None
     for index, row in df.iterrows():
         day = row['Day']
+        hour_str = row['Hour'].strftime('%H%M')
 
-        if day not in days and pd.notna(row['Day']):
-            days.append(day)
+        if pd.notna(row['Day']):
+            last_day = day
+
+        if last_day not in days \
+                and hour_str == '0200' and pd.notna(row['Entrance']):
+            days.append(last_day)
 
     return days
 
 
-def get_data(file_name, watch_list, guards_list_prop, guard_points_prop):
+def get_data(file_name, watch_list, guards_list_prop, guard_spots_prop):
     # Load the spreadsheet
     file_path = f'{file_name}.xlsx'
     xl = pd.ExcelFile(file_path)
@@ -82,11 +88,14 @@ def get_data(file_name, watch_list, guards_list_prop, guard_points_prop):
         if (day is None or day != row['Day']) and pd.notna(row['Day']):
             day = row['Day']
 
+        if day not in days:
+            break
+
         hour_str = row['Hour'].strftime('%H%M')
 
-        for p in guard_points_prop.keys():
+        for p in guard_spots_prop.keys():
             guards = find_guards(watch_list, guards_list_prop,
-                                 guard_points_prop, days, day,
+                                 guard_spots_prop, days, day,
                                  int(hour_str[:2]), p, row)
 
             watch_list[day][hour_str][p] = guards
