@@ -12,7 +12,7 @@ from openpyxl.styles import Alignment
 from getData import get_data
 
 
-RANDOMNESS_LEVEL = 5
+RANDOMNESS_LEVEL = 3
 
 # Define the guard spots and their time slots
 guard_spots = {
