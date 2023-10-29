@@ -5,6 +5,7 @@ import pandas as pd
 
 def find_guards(watch_list, guards_list_prop, guard_spots_prop, days,
                 day_prop, hour_prop, spot_prop, row_prop):
+
     # First hour of the slot
     if pd.notna(row_prop[spot_prop]):
         found_guards = row_prop[spot_prop].split('\n')
@@ -38,13 +39,13 @@ def find_guards(watch_list, guards_list_prop, guard_spots_prop, days,
                     if hour_prop >= 24:
                         day_i = days.index(day_prop)
 
-                        if day_i < len(days) - 1:
-                            slot_d = days[day_i + 1]
+                        if day_i > 0:
+                            slot_d = days[day_i - 1]
 
                         else:
                             break
 
-                guards_slot = watch_list[slot_d][f'{h % 24:02d}00'][spot_prop]
+                guards_slot = watch_list[slot_d][f'{beginning:02d}00'][spot_prop]
 
                 if guards_slot:
                     return guards_slot
@@ -56,14 +57,12 @@ def get_days(df):
     days = list()
     last_day = None
     for index, row in df.iterrows():
-        day = row['Day']
-        hour_str = row['Hour'].strftime('%H%M')
+        day = row['יום']
 
-        if pd.notna(row['Day']):
+        if pd.notna(row['יום']):
             last_day = day
 
-        if last_day not in days \
-                and hour_str == '0200' and pd.notna(row['Entrance']):
+        if last_day not in days and pd.notna(row['ש.ג.']):
             days.append(last_day)
 
     return days
@@ -85,13 +84,13 @@ def get_data(file_name, watch_list, guards_list_prop, guard_spots_prop):
     # Iterate through the rows
     day = None
     for index, row in df.iterrows():
-        if (day is None or day != row['Day']) and pd.notna(row['Day']):
-            day = row['Day']
+        if (day is None or day != row['יום']) and pd.notna(row['יום']):
+            day = row['יום']
 
         if day not in days:
             break
 
-        hour_str = row['Hour'].strftime('%H%M')
+        hour_str = row['שעה'].strftime('%H%M')
 
         for p in guard_spots_prop.keys():
             guards = find_guards(watch_list, guards_list_prop,
