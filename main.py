@@ -1,15 +1,18 @@
 import csv
 import os
+import random
+import pandas as pd
+
 from collections import defaultdict
 from datetime import datetime
 from itertools import cycle
 
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
-from getData import getData
+from getData import get_data
 
-import pandas as pd
 
+RANDOMNESS_LEVEL = 5
 
 # Define the guard points and their time slots
 guard_points = {
@@ -53,79 +56,150 @@ week_days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday',
              'Thursday', 'Friday', 'Saturday']
 
 
-# Helper function to check if a guard is available
-def is_guard_available(watch_list, guard, day_prop, time_prop, days_prop):
+class CurrentGuard:
+    __current_guard = None
+
+    def get_current_guard(self):
+        return self.__current_guard
+
+    def set_current_guard(self, new_guard):
+        self.__current_guard = new_guard
+
+
+current_guard = CurrentGuard()
+
+
+def get_last_guard_time():
+    pass
+
+
+def get_prec_day(day_prop, days_prop):
     day_i = days_prop.index(day_prop)
     prec_day = None
-    hour = int(time_prop[:2])
 
-    # Check if in missings guards
     if day_i > 0:
         prec_day = days_prop[day_i - 1]
 
+    return prec_day
+
+
+def is_guard_missing(guard, day_prop, time_prop, days_prop):
+    prec_day = get_prec_day(day_prop, days_prop)
+    hour = int(time_prop[:2])
+
+    # Check if in missings guards
     if (guard in missings[day_prop] and hour >= 12) or \
             (prec_day and
              guard in missings[prec_day] and
              hour <= 14):
+        return True
+
+    return False
+
+
+# Helper function to check if a guard is available
+def is_guard_available(watch_list, guard, day_prop, time_prop, days_prop, test=False):
+    if is_guard_missing(guard, day_prop, time_prop, days_prop):
         return False
 
-    # Check if the guard already in another point
-    for p in guard_points:
-        for t in guard_points[p]:
-            beginning_str, g_end_str = t.split('-')
-            beginning, g_end = map(int, [beginning_str[:2], g_end_str[:2]])
+    hour = int(time_prop[:2])
 
-            if g_end < beginning:
-                g_end += 24
+    for rest_delay in [0, 3, 6]:
+        updated_hour = hour - rest_delay
+        updated_day = day_prop
 
-                if beginning < hour + 24 < g_end:
-                    hour += 24
+        if updated_hour < 0:
+            updated_day = get_prec_day(day_prop, days_prop)
+            updated_hour += 24
 
-            slot_d = day_prop
-            if beginning < hour < g_end:
-                if hour == 24:
-                    day_i = days_prop.index(day_prop)
+        if not updated_day:
+            break
 
-                    if day_i > 0:
-                        slot_d = days_prop[day_i - 1]
+        # Check if the guard already in another point
+        for p in guard_points:
+            for t in guard_points[p]:
+                beginning_str, g_end_str = t.split('-')
+                beginning, g_end = map(int, [beginning_str[:2], g_end_str[:2]])
 
-            if beginning <= hour < g_end and \
-                    guard in watch_list[slot_d][beginning_str][p]:
-                return False
+                if g_end < beginning:
+                    g_end += 24
+
+                    if beginning <= updated_hour + 24 < g_end:
+                        updated_hour += 24
+
+                slot_d = updated_day
+
+                if beginning <= updated_hour < g_end:
+                    if updated_hour >= 24:
+                        slot_d = get_prec_day(updated_day, days_prop)
+
+                        if not slot_d:
+                            break
+
+                    if guard in watch_list[slot_d][beginning_str][p]:
+                        return False
 
     return True
 
 
+# Align guards cycle to the next available guard
+def align_guards_cycle(watch_list, guard_cycle_prop,
+                       day_prop, time_prop, days_prop):
+    guard = current_guard.get_current_guard()
+
+    if not guard:
+        guard = next(guard_cycle_prop)
+        current_guard.set_current_guard(guard)
+
+    while not is_guard_available(watch_list, guard, day_prop,
+                                 time_prop, days_prop, test=True):
+        guard = next(guard_cycle_prop)
+        current_guard.set_current_guard(guard)
+
+    return guard
+
+
 # Helper function to get the next available guard
-def get_next_available_guard(watch_list, guard_cycle_prop, used_guards_prop,
-                             day_prop, time_prop, days_prop,
-                             current_guard=None):
-    if current_guard is not None:
-        index = guards_list.index(current_guard)
-        buff_cycle = cycle(guards_list[index + 1:] + guards_list[:index + 1])
-    else:
-        buff_cycle = guard_cycle_prop
+def get_next_available_guard(watch_list, guard_cycle_prop, day_prop,
+                             time_prop, days_prop, guards=None,
+                             no_duo=False):
+    current_guard = align_guards_cycle(watch_list, guard_cycle_prop,
+                                       day_prop, time_prop, days_prop)
+    index = guards_list.index(current_guard)
+    buff_cycle = cycle(guards_list[index:] + guards_list[:index])
 
     while True:
-        guard = next(buff_cycle)
-        if guard not in used_guards_prop \
-                and is_guard_available(watch_list, guard, day_prop, time_prop,
-                                       days_prop):
-            duo = next((d for d in duos if guard in d), None)
+        random_guards = list()
+        while len(random_guards) != RANDOMNESS_LEVEL:
+            guard = next(buff_cycle)
+
+            if is_guard_available(watch_list, guard, day_prop,
+                                  time_prop, days_prop) \
+                    and guard not in guards:
+                random_guards.append(guard)
+
+        random.shuffle(random_guards)
+
+        for guard in random_guards:
+            duo = next((duo for duo in duos if guard in duo), None)
             if duo:
                 partner = duo[0] if duo[1] == guard else duo[1]
-                if current_guard:
+
+                if is_guard_missing(partner, day_prop, time_prop, days_prop):
+                    return guard, None
+
+                if no_duo:
                     continue
 
-                elif partner not in used_guards_prop \
-                        and is_guard_available(watch_list, partner, day_prop,
-                                               time_prop, days_prop):
+                elif is_guard_available(watch_list, partner, day_prop,
+                                        time_prop, days_prop):
                     return guard, partner
+
             else:
                 return guard, None
 
 
-def getTodayDayOfWeek():
+def get_today_day_of_week():
     # Get the current date
     today = datetime.today()
 
@@ -135,8 +209,9 @@ def getTodayDayOfWeek():
     return day_name
 
 
-def getDays(watch_list):
+def get_days(watch_list):
     user_input = input("How many days do you need to schedule? ")
+
     while True:
         if user_input.isdigit():
             days_num = int(user_input)
@@ -144,7 +219,7 @@ def getDays(watch_list):
         else:
             user_input = input("Please enter a valid integer. ")
 
-    days_list = list(watch_list.keys()) if watch_list.keys() else getTodayDayOfWeek()
+    days_list = list(watch_list.keys()) if watch_list.keys() else get_today_day_of_week()
     days_cycle = cycle(week_days)
 
     day = next(days_cycle)
@@ -162,82 +237,103 @@ def getDays(watch_list):
     return days_list
 
 
-def getWatchListData(watch_list, days_prop):
+def get_already_filled_guard_slot(watch_list, day, time, hour, point,
+                                  days_prop):
+    guards = watch_list[day][time][point] if watch_list[day][time][point] else list()
+    fill_guard_point = False
+
+    # Point already filled
+    if len(guards) == 2:
+        return guards, fill_guard_point
+
+    for slot in guard_points[point]:
+        # Fill the actual hour with the slot guards if there are
+        # already in one of the slot hour
+        start_str, end_str = slot.split('-')
+        start, end = int(start_str[:2]), int(end_str[:2])
+
+        if end < start:
+            end += 24
+
+            if start <= hour + 24 < end:
+                hour += 24
+
+        if start <= hour < end:
+            fill_guard_point = True
+
+        if start < hour < end:
+            slot_day = day
+            if hour == 24:
+                day_index = days_prop.index(day)
+
+                if day_index > 0:
+                    slot_day = days_prop[day_index - 1]
+
+            guards = watch_list[slot_day][f'{((hour - 1) % 24):02d}00'][point]
+
+    return guards, fill_guard_point
+
+
+def get_guards(watch_list, guard_cycle, day, time, hour, point,
+               days_prop):
+    guards, fill_guard_point = \
+        get_already_filled_guard_slot(watch_list,
+                                      day, time, hour, point,
+                                      days_prop)
+
+    if len(guards) == 2:
+        return guards
+
+    if fill_guard_point:
+        guard1, guard2 = get_next_available_guard(watch_list,
+                                                  guard_cycle,
+                                                  day,
+                                                  time,
+                                                  days_prop,
+                                                  guards=guards)
+
+        for g in [guard1, guard2]:
+            if len(guards) != 2 and g:
+                guards.append(g)
+
+        if len(guards) == 1:
+            guard2 = get_next_available_guard(watch_list,
+                                              guard_cycle,
+                                              day,
+                                              time,
+                                              days_prop,
+                                              guards=guards,
+                                              no_duo=True)[0]
+            guards.append(guard2)
+        guards.sort()
+
+    return guards
+
+
+def get_watch_list_data(watch_list, days_prop):
     # Assign guards to each slot
     guard_cycle = cycle(guards_list)
     for day in days_prop:
         for time in sorted(set([f'{hour:02d}00' for hour in range(24)])):
             hour = int(time[:2])
 
+            # Remove unnecessary start and end of planning
             if (days_prop.index(day) == 0 and hour < 2) or \
                     (days_prop.index(day) == len(days_prop) - 1
                      and hour >= 20):
                 continue
 
-            used_guards = []
             for point in guard_points:
-                if watch_list[day][time][point]:
-                    continue
+                guards = get_guards(watch_list, guard_cycle,
+                                    day, time, hour, point, days_prop)
 
-                guards = watch_list[day][time][point] if watch_list[day][time][point] else None
-
-                if guards:
-                    used_guards.extend([g for g in guards if g])
-
-                need_guard_point = False
-                for slot in guard_points[point]:
-                    start_str, end_str = slot.split('-')
-                    start, end = int(start_str[:2]), int(end_str[:2])
-
-                    if end < start:
-                        end += 24
-
-                        if start < hour + 24 < end:
-                            hour += 24
-
-                    if start <= hour < end:
-                        need_guard_point = True
-
-                    if start < hour < end:
-                        slot_day = day
-                        if hour == 24:
-                            day_index = days_prop.index(day)
-
-                            if day_index > 0:
-                                slot_day = days_prop[day_index - 1]
-
-                        guards = \
-                            watch_list[slot_day][f'{((hour - 1) % 24):02d}00'][point]
-
-                if not guards and need_guard_point:
-                    guard1, guard2 = get_next_available_guard(watch_list,
-                                                              guard_cycle,
-                                                              used_guards,
-                                                              day,
-                                                              time,
-                                                              days_prop)
-                    used_guards.extend([g for g in (guard1, guard2) if g])
-
-                    if guard2 is None:
-                        guard2 = get_next_available_guard(watch_list,
-                                                          guard_cycle,
-                                                          used_guards,
-                                                          day,
-                                                          time,
-                                                          days_prop,
-                                                          current_guard=guard1)[0]
-
-                        used_guards.append(guard2)
-
-                    guards = [guard1, guard2]
-
-                if guards:
+                if len(guards) == 2 and not watch_list[day][time][point]:
                     watch_list[day][time][point].extend(guards)
 
     return watch_list
 
 
-def exportToCSV(watch_list, days_prop):
+def export_to_CSV(watch_list, days_prop):
     with open('watch_list.csv', 'w', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
         header = ['Day', 'Time', 'Entrance', 'Penthouse', 'Rear', 'East', 'Patrol']
@@ -254,7 +350,7 @@ def exportToCSV(watch_list, days_prop):
                 csvwriter.writerow(row)
 
 
-def getExcelDataFrame(watch_list, days_prop):
+def get_excel_data_frame(watch_list, days_prop):
     columns = ['Day', 'Time'] + list(guard_points.keys())
     data = list()
 
@@ -277,7 +373,7 @@ def getExcelDataFrame(watch_list, days_prop):
     return pd.DataFrame(data, columns=columns)
 
 
-def formatExcel(df, worksheet):
+def merge_excel_cells(df, worksheet):
     # Merge adjacent cells with the same content
     for col_num in range(1, len(df.columns) + 2):
         start_row = 1
@@ -300,6 +396,8 @@ def formatExcel(df, worksheet):
                     start_row = row_num
                     start_content = content
 
+
+def adjust_columns_and_rows(worksheet):
     # Adjust the column width according to content, wrap text, and center align
     # text
     for col in worksheet.columns:
@@ -319,8 +417,13 @@ def formatExcel(df, worksheet):
         worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
 
 
-def exportToExcel(file_name, watch_list, days_prop):
-    df = getExcelDataFrame(watch_list, days_prop)
+def format_excel(df, worksheet):
+    merge_excel_cells(df, worksheet)
+    adjust_columns_and_rows(worksheet)
+
+
+def export_to_excel(file_name, watch_list, days_prop):
+    df = get_excel_data_frame(watch_list, days_prop)
 
     # Save to Excel
     excel_path = f'{file_name}.xlsx'
@@ -329,7 +432,7 @@ def exportToExcel(file_name, watch_list, days_prop):
     workbook = load_workbook(filename=excel_path)
     worksheet = workbook.active
 
-    formatExcel(df, worksheet)
+    format_excel(df, worksheet)
 
     workbook.save(filename=excel_path)
 
@@ -343,15 +446,16 @@ if __name__ == '__main__':
     old_dir = os.path.join(src_dir, f'{old_file_name}.xlsx')
 
     if os.path.exists(old_dir):
-        wl = getData(old_file_name, wl, guards_list, guard_points)
+        wl = get_data(old_file_name, wl, guards_list, guard_points)
 
-    days = getDays(wl)
+    days = get_days(wl)
 
     for d in days:
-        wl[d] = defaultdict(lambda: defaultdict(list))
+        if d not in wl.keys():
+            wl[d] = defaultdict(lambda: defaultdict(list))
 
-    wl = getWatchListData(wl, days)
+    wl = get_watch_list_data(wl, days)
 
-    exportToExcel('watch_list', wl, days)
+    export_to_excel('watch_list', wl, days)
 
     print('Shivsakta!')

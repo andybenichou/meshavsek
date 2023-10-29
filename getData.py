@@ -49,10 +49,10 @@ def find_guards(watch_list, guards_list_prop, guard_points_prop, days,
                 if guards_slot:
                     return guards_slot
 
-    return []
+    return list()
 
 
-def getDays(df):
+def get_days(df):
     days = list()
     for index, row in df.iterrows():
         day = row['Day']
@@ -63,7 +63,7 @@ def getDays(df):
     return days
 
 
-def getData(file_name, watch_list, guards_list_prop, guard_points_prop):
+def get_data(file_name, watch_list, guards_list_prop, guard_points_prop):
     # Load the spreadsheet
     file_path = f'{file_name}.xlsx'
     xl = pd.ExcelFile(file_path)
@@ -71,7 +71,7 @@ def getData(file_name, watch_list, guards_list_prop, guard_points_prop):
     # Extract data from the first sheet (adjust as needed)
     df = xl.parse(xl.sheet_names[0])
 
-    days = getDays(df)
+    days = get_days(df)
 
     for d in days:
         watch_list[d] = defaultdict(lambda: defaultdict(list))
