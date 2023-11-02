@@ -16,6 +16,9 @@ class GuardsList:
 
         self.__guards = filtered_guards
 
+    def __repr__(self):
+        return f"GuardList(guards={self.__guards!r})"
+
     def __str__(self):
         return ', '.join([guard.name for guard in self.__guards])
 
@@ -57,6 +60,9 @@ class GuardsList:
             raise TypeError("Unsupported operand type for +: '{}'".format(type(other)))
 
     def find(self, guard):
+        if not guard:
+            return None
+
         if isinstance(guard, Guard):
             guard_name = guard.name
         elif isinstance(guard, str):
