@@ -2,24 +2,29 @@ from collections import defaultdict
 
 import pandas as pd
 
+from GuardsList import GuardsList
 
-def find_guards(watch_list, guards_list_prop, guard_spots_prop, days,
-                day_prop, hour_prop, spot_prop, row_prop):
 
+def find_guards(watch_list, guards_list_obj: GuardsList, guard_spots_prop,
+                days, day_prop, hour_prop, spot_prop, row_prop,
+                print_missing_names=True):
     # First hour of the slot
     if pd.notna(row_prop[spot_prop]):
         found_guards = row_prop[spot_prop].split('\n')
 
         for g in found_guards:
             stripped_g = g.strip()
-            if stripped_g in guards_list_prop:
-                guards_list_prop.remove(stripped_g)
-                guards_list_prop.append(stripped_g)
+            if stripped_g in guards_list_obj:
+                guard_obj = guards_list_obj.find(stripped_g)
+                guards_list_obj.remove(guard_obj)
+                guards_list_obj.append(guard_obj)
 
-            else:
+            elif print_missing_names:
                 print(stripped_g)
 
-        return row_prop[spot_prop].split('\n')
+        guards = GuardsList([guards_list_obj.find(g.strip())
+                             for g in row_prop[spot_prop].split('\n')])
+        return guards
 
     # Find in already filled hours of the slot
     for slot in guard_spots_prop[spot_prop]:
@@ -50,7 +55,7 @@ def find_guards(watch_list, guards_list_prop, guard_spots_prop, days,
                 if guards_slot:
                     return guards_slot
 
-    return list()
+    return GuardsList()
 
 
 def get_days(df):
@@ -68,7 +73,8 @@ def get_days(df):
     return days
 
 
-def get_data(file_name, watch_list, guards_list_prop, guard_spots_prop):
+def get_data(file_name, watch_list, guards_list_obj: GuardsList,
+             guard_spots_prop, print_missing_names=True):
     # Load the spreadsheet
     file_path = f'{file_name}.xlsx'
     xl = pd.ExcelFile(file_path)
@@ -93,9 +99,10 @@ def get_data(file_name, watch_list, guards_list_prop, guard_spots_prop):
         hour_str = row['שעה'].strftime('%H%M')
 
         for p in guard_spots_prop.keys():
-            guards = find_guards(watch_list, guards_list_prop,
+            guards = find_guards(watch_list, guards_list_obj,
                                  guard_spots_prop, days, day,
-                                 int(hour_str[:2]), p, row)
+                                 int(hour_str[:2]), p, row,
+                                 print_missing_names)
 
             watch_list[day][hour_str][p] = guards
 

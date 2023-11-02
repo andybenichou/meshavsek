@@ -3,6 +3,8 @@
 import csv
 import os
 import random
+from copy import deepcopy
+
 import pandas as pd
 
 from collections import defaultdict
@@ -11,40 +13,96 @@ from itertools import cycle
 
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
+
+from Guard import Guard
+from GuardsList import GuardsList
 from get_data import get_data
 
 
 RANDOMNESS_LEVEL = 2
-CRITICAL_DELAY = 6
+CRITICAL_DELAY = 9
 
-# Define the guard spots and their time slots
-guard_spots = {
-    'ש.ג.': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
-             '1400-1700', '1700-2000', '2000-2300', '2300-0200'],
-    'בטונדות': ['0200-0500', '0500-0800', '0800-1100', '1100-1400', '1400-1700',
-                '1700-2000', '2000-2300', '2300-0200'],
-    'פנטאוז': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
-               '1400-1700', '1700-2000', '2000-2300', '2300-0200'],
-    'ימח תחתון': ['2000-2300', '2300-0200', '0200-0500', '0500-0800'],
-    'פטרול': ['2200-0200', '0200-0600'],
-}
-
-guards_number_per_spots = {
-    'ש.ג.': 2,
-    'בטונדות': 2,
-    'פנטאוז': 2,
-    'ימח תחתון': 2,
-    'פטרול': 2,
-}
+# Define the week days
+week_days = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'שבת']
 
 # List of guards
 guards_list = ['יואל', 'ארד', 'ליאור', 'אבנר', 'משה', 'יונג', 'דורון',
-               'אסרף', 'שגיא', 'אנדי', 'אנזו', 'דוד',
-               'דימנטמן', 'מטמוני', 'דעאל', 'אגומס', 'ניסנוב', 'אור',
-               'לואיס', 'דובר', 'כלפה', 'אלכסיי', 'איתי כהן', 'עמיחי', 'לומיאנסקי',
-               'שמעון', 'דותן', 'קריספין', 'רווה', 'דבוש', 'פיאצה', 'שראל', 'שרעבי',
-               'אסף', 'דימה', 'שבצוב', 'נפמן', 'סדון',
-               'סיני', 'לוטם']
+               'אסרף', 'שגיא', 'אנדי', 'אנזו', 'דוד', 'דימנטמן', 'מטמוני',
+               'דעאל', 'אגומס', 'ניסנוב', 'לואיס', 'דובר', 'כלפה', 'אלכסיי',
+               'איתי כהן', 'עמיחי', 'לומיאנסקי', 'שמעון', 'דותן', 'קריספין',
+               'רווה', 'דבוש', 'פיאצה', 'שראל', 'שרעבי', 'אסף', 'דימה',
+               'שבצוב', 'נפמן', 'סדון', 'סיני', 'לוטם', 'אור',
+               'בן', 'נח', 'לישי', 'מאור', 'רועי', 'משה החופל']
+
+not_guarding = ['בן', 'נח', 'לישי', 'מאור', 'רועי', 'משה החופל']
+
+northern_guards = ['לומיאנסקי', 'דובר', 'פיאצה', 'שראל', 'דבוש', 'ליאור',
+                   'לישי', 'קריספין']
+
+# List of missing guards each day
+missing_guards = {
+    'א': ['סדון', 'נפמן', 'לומיאנסקי', 'שגיא', 'אסרף'],
+    'ב': ['שמעון', 'דימה', 'שבצוב', 'אור', 'ניסנוב', 'נפמן', 'דורון'],
+    'ג': ['לואיס', 'ארד', 'קריספין', 'כלפה', 'אבנר', 'דעאל', 'לוטם', 'ניסנוב'],
+    'ד': ['שרעבי', 'דוד', 'אנדי', 'אנזו', 'ניסנוב', 'יואל',
+          'ליאור', 'סיני', 'לוטם'],
+    'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב', 'לישי'],
+    'ו': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
+          'יונג', 'שגיא'],
+    'שבת': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
+            'יונג', 'שגיא']
+}
+
+not_available_times_per_guard = {
+    'לוטם': [{'start': {'day': 'ד', 'hour': 12},
+              'end': {'day': 'ד', 'hour': 19}}],
+    'דבוש': [{'start': {'day': 'ד', 'hour': 17},
+              'end': {'day': 'ה', 'hour': 1}}],
+    'פיאצה': [{'start': {'day': 'ד', 'hour': 17},
+              'end': {'day': 'ה', 'hour': 1}}],
+    'שראל': [{'start': {'day': 'ד', 'hour': 17},
+              'end': {'day': 'ה', 'hour': 1}}],
+    'מטמוני': [{'start': {'day': 'ד', 'hour': 17},
+                'end': {'day': 'ה', 'hour': 1}}],
+    'אסרף': [{'start': {'day': 'ד', 'hour': 17},
+              'end': {'day': 'ה', 'hour': 1}}]
+}
+
+
+def get_next_week_day(day):
+    day_i = week_days.index(day)
+
+    return week_days[(day_i + 1) % 7]
+
+
+def get_guards_list_obj(guards_list_prop):
+    guards_list_obj = GuardsList()
+    for guard in guards_list_prop:
+        if guard not in guards_list_obj:
+            not_available_times = list()
+            for day in missing_guards:
+                if guard in missing_guards[day]:
+                    if guard in northern_guards:
+                        time_obj = {
+                            'start': {'day': day, 'hour': 6},
+                            'end': {'day': get_next_week_day(day), 'hour': 16}
+                        }
+                    else:
+                        time_obj = {
+                            'start': {'day': day, 'hour': 9},
+                            'end': {'day': get_next_week_day(day), 'hour': 12}
+                        }
+
+                    not_available_times.append(time_obj)
+
+            if guard in not_available_times_per_guard:
+                not_available_times.extend(not_available_times_per_guard[guard])
+
+            guards_list_obj.append(Guard(guard,
+                                         not_available_times=not_available_times))
+
+    return guards_list_obj
+
 
 # List of duos
 duos = [('אנדי', 'דוד'), ('דימנטמן', 'מטמוני'), ('שבצוב', 'דימה'),
@@ -53,34 +111,24 @@ duos = [('אנדי', 'דוד'), ('דימנטמן', 'מטמוני'), ('שבצוב
         ('דובר', 'כלפה'), ('קריספין', 'רווה'), ('יואל', 'ארד'),
         ('נפמן', 'סדון')]
 
-# List of missing guards each day
-# For now the missing guards are only from 8 to 16 the next day.
-# TODO: Make a missing constraint by hours
-missings = {
-    'א': ['סדון', 'נפמן', 'לומיאנסקי', 'שגיא', 'אסרף'],
-    'ב': ['שמעון', 'דימה', 'שבצוב', 'אור', 'ניסנוב', 'נפמן', 'דורון'],
-    'ג': ['לואיס', 'ארד', 'קריספין', 'כלפה', 'אבנר', 'דעאל', 'לוטם', 'ניסנוב'],
-    'ד': ['איתי כהן', 'סיני', 'שרעבי', 'דוד', 'אנדי', 'אנזו', 'ניסנוב'],
-    'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב'],
-    'ו': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב'],
-    'שבת': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב']
+# Define the guard spots and their time slots
+guard_spots = {
+    'ש.ג.': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
+             '1400-1700', '1700-2000', '2000-2300', '2300-0200'],
+    'בטונדות': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
+                '1400-1700',
+                '1700-2000', '2000-2300', '2300-0200'],
+    'פנטאוז': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
+               '1400-1700', '1700-2000', '2000-2300', '2300-0200'],
+    'פטרול': ['2200-0200', '0200-0600', '0600-1000'],
 }
 
-# Define the days
-week_days = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'שבת']
-
-
-class CurrentGuard:
-    __current_guard = None
-
-    def get_current_guard(self):
-        return self.__current_guard
-
-    def set_current_guard(self, new_guard):
-        self.__current_guard = new_guard
-
-
-current_guard = CurrentGuard()
+guards_number_per_spots = {
+    'ש.ג.': 2,
+    'בטונדות': 2,
+    'פנטאוז': 2,
+    'פטרול': 2,
+}
 
 
 def get_guards_slots(watch_list, days_prop):
@@ -119,7 +167,7 @@ def get_guards_slots(watch_list, days_prop):
                     next_day = next(days_cycle)
 
                 while (next_day, next_hour) in guard_slots[guard]:
-                    guard_slots[guard].remove((next_day, next_hour) )
+                    guard_slots[guard].remove((next_day, next_hour))
                     slot_obj['end'] = (next_day, next_hour + 1)
                     next_hour += 1
                     if next_hour == 24:
@@ -134,18 +182,20 @@ def get_guards_slots(watch_list, days_prop):
     return guard_slots
 
 
-def check_guards_slots_delays(watch_list, days_prop):
+def check_guards_slots_delays(watch_list, days_prop, need_print=False):
     guard_slots = get_guards_slots(watch_list, days_prop)
+    bad_delays = list()
+    too_good_delays = list()
 
     for guard in guard_slots:
-        last_slot_end_hour_day, last_slot_end_hour = None, None
+        last_slot_end_day, last_slot_end_hour = None, None
         for slot in guard_slots[guard]:
             start_day, start_hour = slot['start']
 
-            if last_slot_end_hour and last_slot_end_hour_day:
+            if last_slot_end_hour and last_slot_end_day:
                 days_cycle = cycle(days_prop)
                 curr_day = next(days_cycle)
-                while curr_day != last_slot_end_hour_day:
+                while curr_day != last_slot_end_day:
                     curr_day = next(days_cycle)
 
                 while curr_day != start_day:
@@ -155,9 +205,46 @@ def check_guards_slots_delays(watch_list, days_prop):
                 delay = start_hour - last_slot_end_hour
 
                 if delay <= CRITICAL_DELAY:
-                    print(f'{guard} יש לו רק {delay} שעות מנוחה לפני המשמרת ביום {start_day} בשעה {slot["start"][1]}')
+                    bad_delays.append({
+                        'guard': guard,
+                        'delay': delay,
+                        'beggining': {
+                            'day': start_day,
+                            'hour': slot["start"][1]
+                        }
+                    })
+                elif CRITICAL_DELAY + 3 < delay <= CRITICAL_DELAY + 12:
+                    too_good_delays.append({
+                        'guard': guard,
+                        'delay': delay,
+                        'beggining': {
+                            'day': start_day,
+                            'hour': slot["start"][1]
+                        }
+                    })
 
-            last_slot_end_hour_day, last_slot_end_hour = slot['end']
+            last_slot_end_day, last_slot_end_hour = slot['end']
+
+    if need_print:
+        # Map each day to its numeric value
+        day_to_num = {day: num for num, day in enumerate(week_days)}
+
+        # Sort the data
+        bad_delays = sorted(bad_delays, key=lambda x: (day_to_num[x['beggining']['day']], x['beggining']['hour']))
+        too_good_delays = sorted(too_good_delays, key=lambda x: (day_to_num[x['beggining']['day']], x['beggining']['hour']))
+
+        for b_d in bad_delays:
+            print(
+                f'{b_d["guard"]} יש לו רק {b_d["delay"]} שעות מנוחה לפני המשמרת ביום {b_d["beggining"]["day"]} בשעה {b_d["beggining"]["hour"]}')
+
+        if bad_delays:
+            print()
+
+        for g_d in too_good_delays:
+            print(
+                f'{g_d["guard"]} יש לו {g_d["delay"]} שעות מנוחה לפני המשמרת ביום {g_d["beggining"]["day"]} בשעה {g_d["beggining"]["hour"]}')
+
+    return len(bad_delays)
 
 
 def get_prec_day(day_prop, days_prop):
@@ -170,29 +257,18 @@ def get_prec_day(day_prop, days_prop):
     return prec_day
 
 
-def is_guard_missing(guard, day_prop, time_prop, days_prop):
-    prec_day = get_prec_day(day_prop, days_prop)
-    hour = int(time_prop[:2])
-
-    # Check if in missings guards
-    if (guard in missings[day_prop] and hour >= 8) or \
-            (prec_day and
-             guard in missings[prec_day] and
-             hour < 16):
-        return True
-
-    return False
-
-
 # Helper function to check if a guard is available
-def is_guard_available(watch_list, guard, day_prop, time_prop, days_prop,
-                       delays=None):
-    if is_guard_missing(guard, day_prop, time_prop, days_prop):
+def is_guard_available(watch_list, guard: Guard, day_prop, time_prop, days_prop,
+                       delays_prop=None):
+    if guard.name in not_guarding:
         return False
 
     hour = int(time_prop[:2])
 
-    for rest_delay in (delays if delays else [0, 3, 6]):
+    if guard.is_missing(day_prop, hour):
+        return False
+
+    for rest_delay in (delays_prop if delays_prop else [0, 3, 6, 9]):
         updated_hour = hour - rest_delay
         updated_day = day_prop
 
@@ -232,34 +308,59 @@ def is_guard_available(watch_list, guard, day_prop, time_prop, days_prop,
 
 # Align guards cycle to the next available guard
 def align_guards_cycle(watch_list, guard_cycle_prop,
-                       day_prop, time_prop, days_prop):
-    guard = current_guard.get_current_guard()
+                       guards_list_obj: GuardsList,
+                       day_prop, time_prop, days_prop,
+                       currently_missing_guards):
+    guard = guards_list_obj.get_current_guard()
 
     if not guard:
         guard = next(guard_cycle_prop)
-        current_guard.set_current_guard(guard)
+        guards_list_obj.set_current_guard(guard)
 
     while not is_guard_available(watch_list, guard, day_prop,
                                  time_prop, days_prop):
+
+        if guard.is_missing(day_prop, time_prop):
+            currently_missing_guards.append(guard)
+
         guard = next(guard_cycle_prop)
-        current_guard.set_current_guard(guard)
+        guards_list_obj.set_current_guard(guard)
 
     return guard
 
 
 # Helper function to get the next available guard
-def get_next_available_guard(watch_list, guard_cycle_prop, day_prop,
-                             time_prop, days_prop, guards=None,
-                             no_duo=False):
+def get_next_available_guard(guards_list_obj: GuardsList,
+                             watch_list, guard_cycle_prop, day_prop,
+                             time_prop, days_prop, currently_missing_guards,
+                             spot, guards: GuardsList = None, no_duo=False):
+    # if time_prop == '0500' \
+    #         and spot == 'פנטאוז' \
+    #         and is_guard_available(watch_list, 'משה החופל',
+    #                                day_prop, time_prop,
+    #                                days_prop) \
+    #         and 'משה החופל' not in guards:
+    #     return 'משה החופל', None
+
     curr_guard = align_guards_cycle(watch_list, guard_cycle_prop,
-                                    day_prop, time_prop, days_prop)
-    index = guards_list.index(curr_guard)
-    buff_cycle = cycle(guards_list[index:] + guards_list[:index])
+                                    guards_list_obj,
+                                    day_prop, time_prop, days_prop,
+                                    currently_missing_guards)
+    index = guards_list_obj.index(curr_guard)
+    buff_cycle = cycle(guards_list_obj[index:] + guards_list_obj[:index])
 
     while True:
         random_guards = list()
         while len(random_guards) != RANDOMNESS_LEVEL:
-            guard = next(buff_cycle)
+            guard = None
+            for g in currently_missing_guards:
+                if is_guard_available(watch_list, g,
+                                      day_prop, time_prop, days_prop):
+                    currently_missing_guards.remove(g)
+                    break
+
+            if not guard:
+                guard = next(buff_cycle)
 
             if is_guard_available(watch_list, guard, day_prop,
                                   time_prop, days_prop) \
@@ -270,21 +371,23 @@ def get_next_available_guard(watch_list, guard_cycle_prop, day_prop,
 
         for guard in random_guards:
             duo = next((duo for duo in duos if guard in duo), None)
+
             if duo:
                 partner = duo[0] if duo[1] == guard else duo[1]
+                partner_obj = guards_list_obj.find(partner)
 
-                if is_guard_missing(partner, day_prop, time_prop, days_prop):
+                if partner_obj.is_missing(day_prop, time_prop):
                     return guard, None
 
-                if not is_guard_available(watch_list, partner, day_prop,
+                if not is_guard_available(watch_list, partner_obj, day_prop,
                                           time_prop, days_prop,
-                                          delays=[0, 3, 6]):
+                                          delays_prop=[0, 3, 6]):
                     return guard, None
 
                 if no_duo:
                     continue
 
-                elif is_guard_available(watch_list, partner, day_prop,
+                elif is_guard_available(watch_list, partner_obj, day_prop,
                                         time_prop, days_prop):
                     return guard, partner
 
@@ -312,7 +415,8 @@ def get_days(watch_list):
         else:
             user_input = input("Please enter a valid integer. ")
 
-    days_list = list(watch_list.keys()) if watch_list.keys() else get_today_day_of_week()
+    days_list = list(
+        watch_list.keys()) if watch_list.keys() else get_today_day_of_week()
     days_cycle = cycle(week_days)
 
     day = next(days_cycle)
@@ -332,7 +436,8 @@ def get_days(watch_list):
 
 def get_already_filled_guard_slot(watch_list, day, time, hour, spot,
                                   days_prop):
-    guards = watch_list[day][time][spot] if watch_list[day][time][spot] else list()
+    guards = watch_list[day][time][spot] if watch_list[day][time][
+        spot] else list()
     fill_guard_spot = False
 
     # Spot already filled
@@ -367,22 +472,27 @@ def get_already_filled_guard_slot(watch_list, day, time, hour, spot,
     return guards, fill_guard_spot
 
 
-def get_guards(watch_list, guard_cycle, day, time, hour, spot,
-               days_prop):
+def get_guards(guards_list_obj: GuardsList, watch_list, guard_cycle, day,
+               time, hour, spot, days_prop, currently_missing_guards):
     guards, fill_guard_spot = \
         get_already_filled_guard_slot(watch_list,
                                       day, time, hour, spot,
                                       days_prop)
 
+    guards = GuardsList(guards)
+
     if len(guards) == guards_number_per_spots[spot]:
         return guards
 
     if fill_guard_spot:
-        guard1, guard2 = get_next_available_guard(watch_list,
+        guard1, guard2 = get_next_available_guard(guards_list_obj,
+                                                  watch_list,
                                                   guard_cycle,
                                                   day,
                                                   time,
                                                   days_prop,
+                                                  currently_missing_guards,
+                                                  spot,
                                                   guards=guards)
 
         for g in [guard1, guard2]:
@@ -390,11 +500,14 @@ def get_guards(watch_list, guard_cycle, day, time, hour, spot,
                 guards.append(g)
 
         if len(guards) == 1 and guards_number_per_spots[spot] == 2:
-            guard2 = get_next_available_guard(watch_list,
+            guard2 = get_next_available_guard(guards_list_obj,
+                                              watch_list,
                                               guard_cycle,
                                               day,
                                               time,
                                               days_prop,
+                                              currently_missing_guards,
+                                              spot,
                                               guards=guards,
                                               no_duo=True)[0]
             guards.append(guard2)
@@ -403,9 +516,12 @@ def get_guards(watch_list, guard_cycle, day, time, hour, spot,
     return guards
 
 
-def get_watch_list_data(watch_list, days_prop, first_hour_prop):
+def get_watch_list_data(guards_list_obj: GuardsList, watch_list, days_prop,
+                        first_hour_prop):
+    currently_missing_guards = list()
+
     # Assign guards to each slot
-    guard_cycle = cycle(guards_list)
+    guard_cycle = cycle(guards_list_obj)
     for day in days_prop:
         for time in sorted(set([f'{hour:02d}00' for hour in range(24)])):
             hour = int(time[:2])
@@ -420,8 +536,9 @@ def get_watch_list_data(watch_list, days_prop, first_hour_prop):
                 continue
 
             for spot in guard_spots:
-                guards = get_guards(watch_list, guard_cycle,
-                                    day, time, hour, spot, days_prop)
+                guards = get_guards(guards_list_obj, watch_list, guard_cycle,
+                                    day, time, hour, spot, days_prop,
+                                    currently_missing_guards)
 
                 if len(guards) == guards_number_per_spots[spot] \
                         and not watch_list[day][time][spot]:
@@ -462,8 +579,9 @@ def get_excel_data_frame(watch_list, days_prop):
             row = [day, time_for_excel]
 
             for spot in guard_spots.keys():
-                guards_str = '\n'.join(watch_list[day][time][spot]) if \
-                    watch_list[day][time][spot] else ' '
+                guards_str = '\n'.join(
+                    [g.name for g in watch_list[day][time][spot]]) \
+                    if watch_list[day][time][spot] else ' '
                 row.append(guards_str)
 
             is_row_empty = True
@@ -518,7 +636,8 @@ def adjust_columns_and_rows(worksheet):
             except:
                 pass
         adjusted_width = (max_length + 2)
-        worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
+        worksheet.column_dimensions[
+            column[0].column_letter].width = adjusted_width
 
 
 def format_excel(df, worksheet):
@@ -543,32 +662,59 @@ def export_to_excel(file_name, watch_list, days_prop):
 
 if __name__ == '__main__':
     # Initialize the watch list
-    wl = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    wl = defaultdict(lambda: defaultdict(lambda: defaultdict(GuardsList)))
 
     old_file_name = 'old'
     src_dir = os.path.dirname(os.path.abspath(__file__))
     old_dir = os.path.join(src_dir, f'{old_file_name}.xlsx')
 
+    guards_list_object = get_guards_list_obj(guards_list)
     if os.path.exists(old_dir):
-        wl = get_data(old_file_name, wl, guards_list, guard_spots)
+        wl = get_data(old_file_name, wl, guards_list_object, guard_spots)
 
     days = get_days(wl)
 
-    for d in days:
-        if d not in wl.keys():
-            wl[d] = defaultdict(lambda: defaultdict(list))
+    i = 0
+    min_delays = 0
+    min_i = 0
+    # Initialize the watch list
+    guards_list_object = get_guards_list_obj(guards_list)
+    wl = defaultdict(lambda: defaultdict(lambda: defaultdict(GuardsList)))
+    wls = list()
+    while i < 10:
+        print(i)
+        wl = defaultdict(lambda: defaultdict(lambda: defaultdict(GuardsList)))
+        if os.path.exists(old_dir):
+            wl = get_data(old_file_name, wl, guards_list_object, guard_spots,
+                          print_missing_names=False)
 
-    # Get first hour of first day:
-    first_hour = None
-    for d in days:
-        for str_hour in sorted(set([f'{hour:02d}00' for hour in range(24)])):
-            if str_hour in wl[d].keys():
-                first_hour = int(str_hour[:2])
+        for d in days:
+            if d not in wl.keys():
+                wl[d] = defaultdict(lambda: defaultdict(GuardsList))
 
-    wl = get_watch_list_data(wl, days, first_hour)
+        # Get first hour of first day:
+        first_hour = None
+        for d in days:
+            for str_hour in sorted(set([f'{hour:02d}00' for hour in range(24)])):
+                if str_hour in wl[d].keys() and not first_hour:
+                    first_hour = int(str_hour[:2])
 
-    export_to_excel('watch_list', wl, days)
+        buff_wl = deepcopy(wl)
 
-    check_guards_slots_delays(wl, days)
+        buff_wl = get_watch_list_data(guards_list_object, buff_wl, days,
+                                      first_hour)
 
-    print('Shivsakta!')
+        delays = check_guards_slots_delays(buff_wl, days)
+
+        wls.append(buff_wl)
+
+        if not min_delays or delays < min_delays:
+            min_delays = delays
+            min_i = i
+        i += 1
+
+    export_to_excel('watch_list', wls[min_i], days)
+
+    check_guards_slots_delays(wls[min_i], days, need_print=True)
+
+    print('\nShivsakta!')
