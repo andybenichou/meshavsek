@@ -96,7 +96,10 @@ def get_data(file_name, watch_list, guards_list_obj: GuardsList,
         if day not in days:
             break
 
-        hour_str = row['שעה'].strftime('%H%M')
+        if isinstance(row['שעה'], str):
+            hour_str = f"{row['שעה']}00"
+        else:
+            hour_str = row['שעה'].strftime('%H%M')
 
         for p in guard_spots_prop.keys():
             guards = find_guards(watch_list, guards_list_obj,

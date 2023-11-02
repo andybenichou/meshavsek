@@ -19,9 +19,9 @@ from GuardsList import GuardsList
 from get_data import get_data
 
 
-RANDOMNESS_LEVEL = 2
+RANDOMNESS_LEVEL = 3
 CRITICAL_DELAY = 6
-TRIES_NUMBER = 1
+TRIES_NUMBER = 10
 
 # Define the week days
 week_days = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'שבת']
@@ -48,7 +48,7 @@ missing_guards = {
     'ג': ['לואיס', 'ארד', 'קריספין', 'כלפה', 'אבנר', 'דעאל', 'לוטם', 'ניסנוב'],
     'ד': ['שרעבי', 'דוד', 'אנדי', 'אנזו', 'ניסנוב', 'יואל',
           'ליאור', 'סיני', 'לוטם'],
-    'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב', 'לישי', 'מרדש'],
+    'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב', 'לישי', 'מרדש', 'אגומס'],
     'ו': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
           'יונג', 'שגיא'],
     'שבת': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
@@ -175,6 +175,7 @@ def get_guards_slots(watch_list, days_prop):
 
 def check_guards_slots_delays(watch_list, days_prop, need_print=False):
     guard_slots = get_guards_slots(watch_list, days_prop)
+    print(guard_slots)
     bad_delays = list()
     too_good_delays = list()
 
@@ -214,6 +215,7 @@ def check_guards_slots_delays(watch_list, days_prop, need_print=False):
                         }
                     })
 
+            print(slot)
             last_slot_end_day, last_slot_end_hour = slot['end']
 
     if need_print:
@@ -397,15 +399,15 @@ def get_today_day_of_week():
 
 
 def get_days(watch_list, user_days_input=None):
-    user_i = input("How many days do you need to schedule? ") \
+    user_input = input("How many days do you need to schedule? ") \
         if not user_days_input else user_days_input
 
     while True:
-        if user_i.isdigit():
-            days_num = int(user_i)
+        if user_input.isdigit():
+            days_num = int(user_input)
             break
         else:
-            user_i = input("Please enter a valid integer. ")
+            user_input = input("Please enter a valid integer. ")
 
     days_list = list(
         watch_list.keys()) if watch_list.keys() else get_today_day_of_week()
@@ -423,7 +425,7 @@ def get_days(watch_list, user_days_input=None):
 
         days_list.append(day)
 
-    return days_list, user_i
+    return days_list, user_input
 
 
 def get_already_filled_guard_slot(watch_list, day, time, hour, spot,

@@ -112,7 +112,7 @@ class GuardsList:
         if self.__contains__(guard_name):
             i = 0
             while i < len(self.__guards):
-                if guard.name == guard_name:
+                if self.__guards[i].name == guard_name:
                     return i
                 i += 1
         else:
