@@ -410,7 +410,7 @@ def plan(user_input_prop, try_number):
     # Initialize the watch list
     watch_list = defaultdict(lambda: defaultdict(lambda: defaultdict(GuardsList)))
 
-    old_file_name = 'old'
+    old_file_name = 'previous'
     src_dir = os.path.dirname(os.path.abspath(__file__))
     old_dir = os.path.join(src_dir, f'{old_file_name}.xlsx')
 
