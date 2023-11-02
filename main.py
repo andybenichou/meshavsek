@@ -20,7 +20,8 @@ from get_data import get_data
 
 
 RANDOMNESS_LEVEL = 2
-CRITICAL_DELAY = 9
+CRITICAL_DELAY = 6
+TRIES_NUMBER = 1
 
 # Define the week days
 week_days = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'שבת']
@@ -32,7 +33,8 @@ guards_list = ['יואל', 'ארד', 'ליאור', 'אבנר', 'משה', 'יונ
                'איתי כהן', 'עמיחי', 'לומיאנסקי', 'שמעון', 'דותן', 'קריספין',
                'רווה', 'דבוש', 'פיאצה', 'שראל', 'שרעבי', 'אסף', 'דימה',
                'שבצוב', 'נפמן', 'סדון', 'סיני', 'לוטם', 'אור',
-               'בן', 'נח', 'לישי', 'מאור', 'רועי', 'משה החופל']
+               'בן', 'נח', 'לישי', 'מאור', 'רועי', 'משה החופל',
+               'מרדש']
 
 not_guarding = ['בן', 'נח', 'לישי', 'מאור', 'רועי', 'משה החופל']
 
@@ -46,26 +48,42 @@ missing_guards = {
     'ג': ['לואיס', 'ארד', 'קריספין', 'כלפה', 'אבנר', 'דעאל', 'לוטם', 'ניסנוב'],
     'ד': ['שרעבי', 'דוד', 'אנדי', 'אנזו', 'ניסנוב', 'יואל',
           'ליאור', 'סיני', 'לוטם'],
-    'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב', 'לישי'],
+    'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב', 'לישי', 'מרדש'],
     'ו': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
           'יונג', 'שגיא'],
     'שבת': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
             'יונג', 'שגיא']
 }
 
-not_available_times_per_guard = {
-    'לוטם': [{'start': {'day': 'ד', 'hour': 12},
-              'end': {'day': 'ד', 'hour': 19}}],
-    'דבוש': [{'start': {'day': 'ד', 'hour': 17},
-              'end': {'day': 'ה', 'hour': 1}}],
-    'פיאצה': [{'start': {'day': 'ד', 'hour': 17},
-              'end': {'day': 'ה', 'hour': 1}}],
-    'שראל': [{'start': {'day': 'ד', 'hour': 17},
-              'end': {'day': 'ה', 'hour': 1}}],
-    'מטמוני': [{'start': {'day': 'ד', 'hour': 17},
-                'end': {'day': 'ה', 'hour': 1}}],
-    'אסרף': [{'start': {'day': 'ד', 'hour': 17},
-              'end': {'day': 'ה', 'hour': 1}}]
+# Per guard, with key guard name, with value list of
+#   {'start': {'day': 'ד', 'hour': 12}, 'end': {'day': 'ד', 'hour': 19}}
+not_available_times_per_guard = {}
+
+
+# List of duos
+duos = [('אנדי', 'דוד'), ('דימנטמן', 'מטמוני'), ('שבצוב', 'דימה'),
+        ('עמיחי', 'איתי כהן'), ('דבוש', 'פיאצה'), ('שראל', 'שרעבי'),
+        ('אלכסיי', 'לומיאנסקי'), ('סיני', 'לוטם'), ('דעאל', 'אגומס'),
+        ('דובר', 'כלפה'), ('קריספין', 'רווה'), ('יואל', 'ארד'),
+        ('נפמן', 'סדון')]
+
+# Define the guard spots and their time slots
+guard_spots = {
+    'ש.ג.': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
+             '1400-1700', '1700-2000', '2000-2300', '2300-0200'],
+    'בטונדות': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
+                '1400-1700',
+                '1700-2000', '2000-2300', '2300-0200'],
+    'פנטאוז': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
+               '1400-1700', '1700-2000', '2000-2300', '2300-0200'],
+    'פטרול': ['2200-0200', '0200-0600'],
+}
+
+guards_number_per_spots = {
+    'ש.ג.': 2,
+    'בטונדות': 2,
+    'פנטאוז': 2,
+    'פטרול': 2,
 }
 
 
@@ -102,33 +120,6 @@ def get_guards_list_obj(guards_list_prop):
                                          not_available_times=not_available_times))
 
     return guards_list_obj
-
-
-# List of duos
-duos = [('אנדי', 'דוד'), ('דימנטמן', 'מטמוני'), ('שבצוב', 'דימה'),
-        ('עמיחי', 'איתי כהן'), ('דבוש', 'פיאצה'), ('שראל', 'שרעבי'),
-        ('אלכסיי', 'לומיאנסקי'), ('סיני', 'לוטם'), ('דעאל', 'אגומס'),
-        ('דובר', 'כלפה'), ('קריספין', 'רווה'), ('יואל', 'ארד'),
-        ('נפמן', 'סדון')]
-
-# Define the guard spots and their time slots
-guard_spots = {
-    'ש.ג.': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
-             '1400-1700', '1700-2000', '2000-2300', '2300-0200'],
-    'בטונדות': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
-                '1400-1700',
-                '1700-2000', '2000-2300', '2300-0200'],
-    'פנטאוז': ['0200-0500', '0500-0800', '0800-1100', '1100-1400',
-               '1400-1700', '1700-2000', '2000-2300', '2300-0200'],
-    'פטרול': ['2200-0200', '0200-0600', '0600-1000'],
-}
-
-guards_number_per_spots = {
-    'ש.ג.': 2,
-    'בטונדות': 2,
-    'פנטאוז': 2,
-    'פטרול': 2,
-}
 
 
 def get_guards_slots(watch_list, days_prop):
@@ -268,7 +259,7 @@ def is_guard_available(watch_list, guard: Guard, day_prop, time_prop, days_prop,
     if guard.is_missing(day_prop, hour):
         return False
 
-    for rest_delay in (delays_prop if delays_prop else [0, 3, 6, 9]):
+    for rest_delay in (delays_prop if delays_prop else list(range(0, CRITICAL_DELAY + 1, 3))):
         updated_hour = hour - rest_delay
         updated_day = day_prop
 
@@ -370,7 +361,7 @@ def get_next_available_guard(guards_list_obj: GuardsList,
         random.shuffle(random_guards)
 
         for guard in random_guards:
-            duo = next((duo for duo in duos if guard in duo), None)
+            duo = next((duo for duo in duos if guard.name in duo), None)
 
             if duo:
                 partner = duo[0] if duo[1] == guard else duo[1]
@@ -389,7 +380,7 @@ def get_next_available_guard(guards_list_obj: GuardsList,
 
                 elif is_guard_available(watch_list, partner_obj, day_prop,
                                         time_prop, days_prop):
-                    return guard, partner
+                    return guard, partner_obj
 
             else:
                 return guard, None
@@ -405,15 +396,16 @@ def get_today_day_of_week():
     return day_name
 
 
-def get_days(watch_list):
-    user_input = input("How many days do you need to schedule? ")
+def get_days(watch_list, user_days_input=None):
+    user_i = input("How many days do you need to schedule? ") \
+        if not user_days_input else user_days_input
 
     while True:
-        if user_input.isdigit():
-            days_num = int(user_input)
+        if user_i.isdigit():
+            days_num = int(user_i)
             break
         else:
-            user_input = input("Please enter a valid integer. ")
+            user_i = input("Please enter a valid integer. ")
 
     days_list = list(
         watch_list.keys()) if watch_list.keys() else get_today_day_of_week()
@@ -431,7 +423,7 @@ def get_days(watch_list):
 
         days_list.append(day)
 
-    return days_list
+    return days_list, user_i
 
 
 def get_already_filled_guard_slot(watch_list, day, time, hour, spot,
@@ -661,29 +653,25 @@ def export_to_excel(file_name, watch_list, days_prop):
 
 
 if __name__ == '__main__':
-    # Initialize the watch list
-    wl = defaultdict(lambda: defaultdict(lambda: defaultdict(GuardsList)))
-
-    old_file_name = 'old'
-    src_dir = os.path.dirname(os.path.abspath(__file__))
-    old_dir = os.path.join(src_dir, f'{old_file_name}.xlsx')
-
-    guards_list_object = get_guards_list_obj(guards_list)
-    if os.path.exists(old_dir):
-        wl = get_data(old_file_name, wl, guards_list_object, guard_spots)
-
-    days = get_days(wl)
-
     i = 0
     min_delays = 0
     min_i = 0
-    # Initialize the watch list
-    guards_list_object = get_guards_list_obj(guards_list)
-    wl = defaultdict(lambda: defaultdict(lambda: defaultdict(GuardsList)))
     wls = list()
-    while i < 10:
-        print(i)
+    user_i = None
+    while i < TRIES_NUMBER:
+        # Initialize the watch list
         wl = defaultdict(lambda: defaultdict(lambda: defaultdict(GuardsList)))
+
+        old_file_name = 'old'
+        src_dir = os.path.dirname(os.path.abspath(__file__))
+        old_dir = os.path.join(src_dir, f'{old_file_name}.xlsx')
+
+        guards_list_object = get_guards_list_obj(guards_list)
+        if os.path.exists(old_dir):
+            wl = get_data(old_file_name, wl, guards_list_object, guard_spots)
+
+        days, user_i = get_days(wl, user_days_input=user_i)
+
         if os.path.exists(old_dir):
             wl = get_data(old_file_name, wl, guards_list_object, guard_spots,
                           print_missing_names=False)
@@ -711,10 +699,14 @@ if __name__ == '__main__':
         if not min_delays or delays < min_delays:
             min_delays = delays
             min_i = i
+
         i += 1
 
-    export_to_excel('watch_list', wls[min_i], days)
+        print(f'Try {i}')
 
-    check_guards_slots_delays(wls[min_i], days, need_print=True)
+        if i == TRIES_NUMBER:
+            print()
+            export_to_excel('watch_list', wls[min_i], days)
+            check_guards_slots_delays(wls[min_i], days, need_print=True)
 
     print('\nShivsakta!')

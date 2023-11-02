@@ -9,6 +9,11 @@ class GuardsList:
             filtered_guards = [g for g in guards if g]
         else:
             filtered_guards = list()
+
+        for g in filtered_guards:
+            if not isinstance(g, Guard):
+                raise TypeError("Initial guards list must be only composed of Guard objects")
+
         self.__guards = filtered_guards
 
     def __str__(self):
@@ -59,17 +64,23 @@ class GuardsList:
         else:
             raise TypeError("Guard must be a Guard object or a string")
 
-        for guard in self.__guards:
-            if guard.name == guard_name:
-                return guard
+        for g in self.__guards:
+            if g.name == guard_name:
+                return g
         return None
 
     def append(self, guard: Guard):
+        if not isinstance(guard, Guard):
+            raise TypeError("Guard must be a Guard object")
+
         if guard and not self.__contains__(guard):
             self.__guards.append(guard)
 
     def extend(self, guards: [Guard]):
         for guard in guards:
+            if not isinstance(guard, Guard):
+                raise TypeError("Guard must be a Guard object")
+
             self.append(guard)
 
     def remove(self, guard):

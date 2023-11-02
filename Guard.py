@@ -17,6 +17,11 @@ class Guard:
     def __str__(self):
         return self.name
 
+    def __eq__(self, other):
+        if isinstance(other, Guard):
+            return self.name == other.name
+        return False
+
     def add_guard_slot(self, start, end):
         guard_obj = {
             'start': start,
