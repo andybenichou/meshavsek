@@ -189,7 +189,7 @@ def get_next_available_guard(guards_list_prop: GuardsList,
     index = guards_list_prop.index(curr_guard)
     buff_cycle = cycle(guards_list_prop[index:] + guards_list_prop[:index])
 
-    MAX_ITERATIONS = len(guards_list_prop) * len(days) * 5  # Set a maximum limit for the number of iterations
+    MAX_ITERATIONS = len(guards_list_prop) * len(days) * 8  # Set a maximum limit for the number of iterations
     iteration_count = 0
     chosen_guards = None
     while True:
