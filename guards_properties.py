@@ -52,7 +52,7 @@ GUARDS_LIST = GuardsList(
      Guard('סדון', partner='נפמן'),
      Guard('סיני', partner='לוטם'),
      Guard('לוטם', partner='סיני'),
-     Guard('אור', spots_preferences=list(GUARD_SPOTS.keys()).remove('ש.ג.')),
+     Guard('אור', spots_preferences=list(filter(lambda spot: spot != 'ש.ג.', GUARD_SPOTS.keys()))),
      Guard('מרדש', is_living_far_away=True),
      Guard('בן', is_guarding=False),
      Guard('נח', is_guarding=False),

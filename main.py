@@ -165,6 +165,7 @@ def get_next_available_guard(guards_list_prop: GuardsList,
                              days, currently_missing_guards,
                              spot, guards: GuardsList = None, no_duo=False):
     hopel = guards_list_prop.find('משה החופל')
+
     if hour == 5 and hopel \
             and hopel.is_available(watch_list, day, hour, days) \
             and hopel not in guards:
