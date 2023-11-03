@@ -11,7 +11,8 @@ class Guard:
     def __init__(self, name, partner=None, guards_slots=None,
                  not_available_times=None,
                  is_guarding=True, is_living_far_away=False,
-                 spots_preferences=None, time_preferences=None):
+                 spots_preferences=None, time_preferences=None,
+                 last_spot=None):
         self.name = name
         self.partner = partner
         self.__guards_slots = guards_slots if guards_slots else list()
@@ -22,6 +23,7 @@ class Guard:
         self.is_living_far_away = is_living_far_away
         self.spots_preferences = spots_preferences
         self.time_preferences = time_preferences
+        self.last_spot = last_spot
 
     def __repr__(self):
         return f"Guard(name={self.name!r})"
@@ -71,11 +73,17 @@ class Guard:
         if not self.is_guarding:
             return False
 
-        if spot and self.spots_preferences \
+        elif spot and self.spots_preferences \
                 and spot not in self.spots_preferences:
             return False
 
-        if self.time_preferences:
+        elif self.is_missing(day, hour):
+            return False
+
+        elif spot and self.last_spot == spot:
+            return False
+
+        elif self.time_preferences:
             in_time_preferences = False
             for time_pref in self.time_preferences:
                 if time_pref['start'] <= hour < time_pref['end']:
@@ -83,9 +91,6 @@ class Guard:
 
             if not in_time_preferences:
                 return False
-
-        if self.is_missing(day, hour):
-            return False
 
         for rest_delay in (delays_prop if delays_prop else list(range(0, CRITICAL_DELAY + 1, 3))):
             updated_hour = hour - rest_delay

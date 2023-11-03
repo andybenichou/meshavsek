@@ -7,13 +7,13 @@ from itertools import cycle
 from Guard import Guard
 from GuardsList import GuardsList
 from consts import GUARD_SPOTS, TRIES_NUMBER, WEEK_DAYS, CRITICAL_DELAY, \
-    RANDOMNESS_LEVEL
+    RANDOMNESS_LEVEL, PREVIOUS_FILE_NAME
 from export import export_to_excel
 from get_data import get_previous_data
 
-
 # List of guards
 from helper import get_next_week_day, get_today_day_of_week, find_guard_slot
+
 
 guards_list = GuardsList(
     [Guard('יואל', partner='ארד'),
@@ -67,7 +67,8 @@ guards_list = GuardsList(
            time_preferences=[{
                'start': 5,
                'end': 8,
-           }])])
+           }])
+     ])
 
 # List of missing guards each day
 missing_guards = {
@@ -84,10 +85,20 @@ missing_guards = {
 }
 
 
-def get_guards_slots(watch_list, days):
-    guard_slots = {guard.name: list() for guard in guards_list}
+# Define a custom exception for when the maximum number of iterations is reached
+class MaxIterationsReached(Exception):
+    def __init__(self, message="Maximum iterations reached in the function"):
+        self.message = message
+        super().__init__(self.message)
 
-    for guard in guards_list:
+    def __str__(self):
+        return self.message
+
+
+def get_guards_slots(watch_list, days, guards):
+    guard_slots = {guard.name: list() for guard in guards}
+
+    for guard in guards:
         for day in watch_list:
             for hour in watch_list[day]:
                 for spot in watch_list[day][hour]:
@@ -123,8 +134,8 @@ def print_delays(bad_delays, too_good_delays):
             f'{g_d["guard"]} יש לו {g_d["delay"]} שעות מנוחה לפני המשמרת ביום {g_d["start"]["day"]} בשעה {g_d["start"]["hour"]}')
 
 
-def check_guards_slots_delays(watch_list, days, need_print=False):
-    guard_slots = get_guards_slots(watch_list, days)
+def check_guards_slots_delays(watch_list, days, guards, need_print=False):
+    guard_slots = get_guards_slots(watch_list, days, guards)
     bad_delays = list()
     too_good_delays = list()
 
@@ -229,7 +240,14 @@ def get_next_available_guard(guards_list_prop: GuardsList,
     index = guards_list_prop.index(curr_guard)
     buff_cycle = cycle(guards_list_prop[index:] + guards_list_prop[:index])
 
+    MAX_ITERATIONS = 1000  # Set a maximum limit for the number of iterations
+    iteration_count = 0
     while True:
+        if iteration_count > MAX_ITERATIONS:
+            raise MaxIterationsReached
+
+        iteration_count += 1
+
         random_guards = get_random_guards(watch_list, buff_cycle,
                                           currently_missing_guards,
                                           day, hour, spot, days,
@@ -335,16 +353,29 @@ def get_watch_list_data(guards_list_prop: GuardsList, watch_list, days,
                      and hour >= 20):
                 continue
 
-            for spot in GUARD_SPOTS:
+            spots = list(GUARD_SPOTS.keys())
+            random.shuffle(spots)
+            for spot in spots:
                 guards = get_guards(guards_list_prop, watch_list, guard_cycle,
                                     day, hour, spot, days,
                                     currently_missing_guards)
 
                 if len(guards) == GUARD_SPOTS[spot]['guards_number'] \
                         and not watch_list[day][hour][spot]:
+                    for g in guards:
+                        g.last_spot = spot
                     watch_list[day][hour][spot].extend(guards)
 
     return watch_list
+
+
+def get_first_hour(watch_list, days):
+    # Get first hour of first day:
+    first_hour = None
+    for d in days:
+        for h in range(24):
+            if h in watch_list[d].keys() and not first_hour:
+                return h
 
 
 def get_days(watch_list, days_input=None):
@@ -374,24 +405,17 @@ def get_days(watch_list, days_input=None):
 
         # Initialize day in watch_list
         watch_list[day] = defaultdict(lambda: defaultdict(GuardsList))
-        days_list.append(day)
+        days.append(day)
 
-    return days_list, user_input
+    first_hour = get_first_hour(watch_list, days)
 
-
-def get_first_hour(watch_list, days):
-    # Get first hour of first day:
-    first_hour = None
-    for d in days:
-        for h in range(24):
-            if h in watch_list[d].keys() and not first_hour:
-                return h
+    return days, days_input, first_hour
 
 
-def enriched_guards_list(guards_list_prop):
+def enriched_guards_list(guards_list_prop, missing_guards_prop):
     for guard in guards_list_prop:
-        for day in missing_guards:
-            if guard in missing_guards[day]:
+        for day in missing_guards_prop:
+            if guard in missing_guards_prop[day]:
                 if guard.is_living_far_away:
                     time_obj = {
                         'start': {'day': day, 'hour': 6},
@@ -406,27 +430,35 @@ def enriched_guards_list(guards_list_prop):
                 guard.add_not_available_time(time_obj)
 
 
-def plan(user_input_prop, try_number):
+def init_watch_list(guards, missing_guards_prop, print_missing_names):
     # Initialize the watch list
     watch_list = defaultdict(lambda: defaultdict(lambda: defaultdict(GuardsList)))
 
-    old_file_name = 'previous'
     src_dir = os.path.dirname(os.path.abspath(__file__))
-    old_dir = os.path.join(src_dir, f'{old_file_name}.xlsx')
+    old_dir = os.path.join(src_dir, f'{PREVIOUS_FILE_NAME}.xlsx')
 
-    enriched_guards_list(guards_list)
+    enriched_guards_list(guards, missing_guards_prop)
 
     if os.path.exists(old_dir):
-        watch_list = get_previous_data(old_file_name, watch_list, guards_list,
-                                       GUARD_SPOTS, print_missing_names=(try_number == 0))
+        watch_list = get_previous_data(PREVIOUS_FILE_NAME, watch_list, guards,
+                                       GUARD_SPOTS, print_missing_names=print_missing_names)
 
-    days, user_i = get_days(watch_list, days_input=user_input_prop)
+    return watch_list
 
-    first_hour = get_first_hour(watch_list, days)
 
-    watch_list = get_watch_list_data(guards_list, watch_list, days, first_hour)
+def plan(user_input_prop, guards, missing_guards_prop, print_missing_names):
+    try:
+        watch_list = init_watch_list(guards, missing_guards_prop,
+                                     print_missing_names)
 
-    delays_num = check_guards_slots_delays(watch_list, days)
+        days, user_i, first_hour = get_days(watch_list, days_input=user_input_prop)
+
+        watch_list = get_watch_list_data(guards, watch_list, days, first_hour)
+        delays_num = check_guards_slots_delays(watch_list, days, guards)
+
+    except MaxIterationsReached:
+        print("Maximum number of iterations reached, retrying...")
+        return plan(user_input_prop, guards, missing_guards_prop, print_missing_names)
 
     return user_i, days, delays_num, watch_list
 
@@ -437,7 +469,9 @@ if __name__ == '__main__':
     best_wl = None
     user_input = None
     while try_num < TRIES_NUMBER:
-        user_input, days_list, delays, wl = plan(user_input, try_num)
+        user_input, days_list, delays, wl = plan(user_input, guards_list,
+                                                 missing_guards,
+                                                 try_num == 0)
 
         if not min_delays or delays < min_delays:
             min_delays = delays
@@ -449,6 +483,7 @@ if __name__ == '__main__':
 
         if try_num == TRIES_NUMBER:
             export_to_excel('watch_list', best_wl, days_list, GUARD_SPOTS)
-            check_guards_slots_delays(best_wl, days_list, need_print=True)
+            check_guards_slots_delays(best_wl, days_list, guards_list,
+                                      need_print=True)
 
     print('\nShivsakta!')
