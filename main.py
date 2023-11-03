@@ -1,91 +1,20 @@
 import random
 
 from collections import defaultdict
+from copy import deepcopy
 from itertools import cycle
 
-from Guard import Guard
 from GuardsList import GuardsList
-from consts import GUARD_SPOTS, TRIES_NUMBER, WEEK_DAYS, MINIMAL_DELAY, \
-    RANDOMNESS_LEVEL, PREVIOUS_FILE_NAME, MISSING_GUARDS_FILE_NAME
+from consts import TRIES_NUMBER, WEEK_DAYS, MINIMAL_DELAY, \
+    RANDOMNESS_LEVEL, PREVIOUS_FILE_NAME, MISSING_GUARDS_FILE_NAME, GUARD_SPOTS
 from export import export_to_excel
-from get_data import get_previous_data
-
-# List of guards
+from get_previous_data import get_previous_data
 from get_missing_guards import get_missing_guards
 from helper import get_today_day_of_week, find_guard_slot
 
-
-guards_list = GuardsList(
-    [Guard('יואל', partner='ארד'),
-     Guard('ארד', partner='יואל'),
-     Guard('ליאור', is_living_far_away=True),
-     Guard('אבנר'),
-     Guard('משה'),
-     Guard('יונג'),
-     Guard('דורון'),
-     Guard('אסרף'),
-     Guard('שגיא'),
-     Guard('אנדי', partner='דוד'),
-     Guard('אנזו'),
-     Guard('דוד', partner='אנדי'),
-     Guard('דימנטמן', partner='מטמוני'),
-     Guard('מטמוני', partner='דימנטמן'),
-     Guard('דעאל', partner='אגומס'),
-     Guard('אגומס', partner='דעאל'),
-     Guard('ניסנוב'),
-     Guard('לואיס'),
-     Guard('דובר', partner='כלפה', is_living_far_away=True),
-     Guard('כלפה', partner='דובר'),
-     Guard('אלכסיי', partner='לומיאנסקי'),
-     Guard('לומיאנסקי', partner='אלכסיי', is_living_far_away=True),
-     Guard('איתי כהן', partner='עמיחי'),
-     Guard('עמיחי', partner='איתי כהן'),
-     Guard('שמעון'),
-     Guard('דותן'),
-     Guard('קריספין', partner='רווה', is_living_far_away=True),
-     Guard('רווה', partner='קריספין'),
-     Guard('דבוש', partner='פיאצה', is_living_far_away=True),
-     Guard('פיאצה', partner='דבוש', is_living_far_away=True),
-     Guard('שראל', partner='שרעבי', is_living_far_away=True),
-     Guard('שרעבי', partner='שראל'),
-     Guard('אסף'),
-     Guard('דימה', partner='שבצוב'),
-     Guard('שבצוב', partner='דימה'),
-     Guard('נפמן', partner='סדון'),
-     Guard('סדון', partner='נפמן'),
-     Guard('סיני', partner='לוטם'),
-     Guard('לוטם', partner='סיני'),
-     Guard('אור', spots_preferences=list(GUARD_SPOTS.keys()).remove('ש.ג.')),
-     Guard('מרדש', is_living_far_away=True),
-     Guard('בן', is_guarding=False),
-     Guard('נח', is_guarding=False),
-     Guard('לישי', is_guarding=False, is_living_far_away=True),
-     Guard('מאור', is_guarding=False),
-     Guard('רועי', is_guarding=False),
-     Guard('משה החופל', is_guarding=False,
-           spots_preferences=['פנטאוז'],
-           time_preferences=[{
-               'start': 5,
-               'end': 8,
-           }])
-     ])
-
-# # List of missing guards each day
-# missing_guards = {
-#     'א': ['סדון', 'נפמן', 'לומיאנסקי', 'שגיא', 'אסרף'],
-#     'ב': ['שמעון', 'דימה', 'שבצוב', 'אור', 'ניסנוב', 'נפמן', 'דורון'],
-#     'ג': ['לואיס', 'ארד', 'קריספין', 'כלפה', 'אבנר', 'דעאל', 'לוטם', 'ניסנוב'],
-#     'ד': ['שרעבי', 'דוד', 'אנדי', 'אנזו', 'ניסנוב', 'יואל',
-#           'ליאור', 'סיני', 'לוטם'],
-#     'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב', 'לישי', 'מרדש', 'אגומס', 'עמיחי'],
-#     'ו': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
-#           'יונג', 'שגיא'],
-#     'שבת': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
-#             'יונג', 'שגיא']
-# }
+from guards_properties import GUARDS_LIST
 
 
-# Define a custom exception for when the maximum number of iterations is reached
 class MaxIterationsReached(Exception):
     def __init__(self, message="Maximum iterations reached in the function"):
         self.message = message
@@ -95,7 +24,6 @@ class MaxIterationsReached(Exception):
         return self.message
 
 
-# Define a custom exception for when the guard planning can't be filled
 class ImpossibleToFillPlanning(Exception):
     def __init__(self, message="Impossible to fill planning"):
         self.message = message
@@ -437,22 +365,21 @@ def init_watch_list(guards, print_missing_names):
 
 
 def plan(user_input_prop, guards, print_missing_names, retry_after_infinite_loop_num=0):
+    watch_list, _ = init_watch_list(guards, print_missing_names)
+    days, user_i, first_hour = get_days(watch_list, days_input=user_input_prop)
+
     try:
         if retry_after_infinite_loop_num >= 20:
             raise ImpossibleToFillPlanning("Watch list can't be filled with this context, "
                                            "try to recruit more guards, remove some guard spots "
                                            "or reduce the MINIMAL_DELAY between each guard in consts file")
 
-        watch_list, _ = init_watch_list(guards, print_missing_names)
-
-        days, user_i, first_hour = get_days(watch_list, days_input=user_input_prop)
-
         watch_list = get_watch_list_data(guards, watch_list, days, first_hour)
         delays_num = check_guards_slots_delays(watch_list, days, guards)
 
     except MaxIterationsReached:
         print("Maximum number of iterations reached, retrying...")
-        return plan(user_input_prop, guards, print_missing_names,
+        return plan(user_i, guards, print_missing_names,
                     retry_after_infinite_loop_num=retry_after_infinite_loop_num + 1)
 
     return user_i, days, delays_num, watch_list
@@ -463,7 +390,10 @@ if __name__ == '__main__':
     min_delays = 0
     best_wl = None
     user_input = None
+    days_list = list()
+    guards_list = None
     while try_num < TRIES_NUMBER:
+        guards_list = deepcopy(GUARDS_LIST)
         user_input, days_list, delays, wl = plan(user_input, guards_list,
                                                  try_num == 0)
 
@@ -475,12 +405,11 @@ if __name__ == '__main__':
 
         print(f'Try {try_num}')
 
-        if try_num == TRIES_NUMBER:
-            export_to_excel('watch_list', best_wl, days_list, GUARD_SPOTS)
-            check_guards_slots_delays(best_wl, days_list, guards_list,
-                                      need_print=True)
-
         if user_input == '0':
             break
+
+    export_to_excel('watch_list', best_wl, days_list, GUARD_SPOTS)
+    check_guards_slots_delays(best_wl, days_list, guards_list,
+                              need_print=True)
 
     print('\nShivsakta!')

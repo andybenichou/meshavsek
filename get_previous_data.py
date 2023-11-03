@@ -10,6 +10,12 @@ from helper import find_guard_slot
 def find_guards(watch_list, guards_list: GuardsList, days, day, hour, spot,
                 row, print_missing_names=True):
     missing_names = list()
+
+    slot = find_guard_slot(day, hour, spot, days)
+
+    if not slot:
+        return GuardsList()
+
     # First hour of the slot
     if pd.notna(row[spot]):
         found_guards = row[spot].split('\n')
@@ -32,8 +38,6 @@ def find_guards(watch_list, guards_list: GuardsList, days, day, hour, spot,
         return guards
 
     # Find in already filled hours of the slot
-    slot = find_guard_slot(day, hour, spot, days)
-
     if slot:
         guards_slot = watch_list[slot['start']['day']][slot['start']['hour']][spot]
 
@@ -105,7 +109,6 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
         for p in guard_spots.keys():
             guards = find_guards(watch_list, guards_list, days, day,
                                  hour, p, row, print_missing_names)
-
             watch_list[day][hour][p] = guards
 
     return watch_list

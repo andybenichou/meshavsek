@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from consts import GUARD_SPOTS, WEEK_DAYS
+from consts import WEEK_DAYS, GUARD_SPOTS
 
 
 def get_prec_day(day, days):

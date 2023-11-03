@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Union
 
 from Guard import Guard
@@ -60,6 +61,26 @@ class GuardsList:
             return GuardsList(self.__guards + other.__guards)
         else:
             raise TypeError("Unsupported operand type for +: '{}'".format(type(other)))
+
+    def __copy__(self):
+        # We create a new GuardsList instance with a shallow copy of the guards list
+        return GuardsList(self.__guards[:])
+
+    def __deepcopy__(self, memo=None):
+        # Create a new GuardsList instance with an empty list to avoid recursive deepcopy calls
+        new_guards_list = GuardsList()
+
+        # Add the new instance to the memo dictionary
+        memo = memo or {}
+        memo[id(self)] = new_guards_list
+
+        # Now manually deepcopy each guard, which will handle guards' internal deep attributes
+        new_guards_list.__guards = [deepcopy(guard, memo) for guard in self.__guards]
+
+        # Deep copy any other attributes that need it
+        new_guards_list.__current_guard = deepcopy(self.__current_guard, memo) if self.__current_guard else None
+
+        return new_guards_list
 
     def find(self, guard: Union[Guard, str]) -> Union[Guard, None]:
         if not guard:

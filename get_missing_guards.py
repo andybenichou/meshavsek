@@ -4,8 +4,9 @@ from typing import Union
 
 import pandas as pd
 
-from Guard import week_days, Guard
+from Guard import Guard
 from GuardsList import GuardsList
+from consts import WEEK_DAYS
 from helper import get_week_dates_hebrew, get_next_week_day
 
 
@@ -64,7 +65,7 @@ def get_missing_guards(file_name, guards: GuardsList):
     missing_dir = os.path.join(src_missing_dir, file_path)
 
     if not os.path.exists(missing_dir):
-        return {day: list() for day in week_days}
+        return {day: list() for day in WEEK_DAYS}
 
     xl = pd.ExcelFile(file_path)
 
@@ -86,7 +87,7 @@ def get_missing_guards(file_name, guards: GuardsList):
                     and row[date] not in missing_guards[date_key]:
                 guard_str = row[date]
                 guard = find_guard(guards, guard_str)
-                formatted_day = WEEKDAYS_FORMAT[date.split()[0]]
+                formatted_day = WEEKDAYS_FORMAT[date_key.split()[0]]
 
                 if not guard:
                     if guard_str not in not_known_guards:

@@ -4,6 +4,7 @@ TRIES_NUMBER = 50
 PREVIOUS_FILE_NAME = 'שבצ״ק'
 MISSING_GUARDS_FILE_NAME = 'יציות הביתה _ פלוגה ג 5032'
 TIMEOUT = 5
+WEEK_DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'שבת']
 
 GUARD_SPOTS = {
     'ש.ג.': {
@@ -31,5 +32,3 @@ GUARD_SPOTS = {
         'guards_number': 2,
     },
 }
-
-WEEK_DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'שבת']
