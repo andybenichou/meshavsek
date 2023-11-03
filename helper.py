@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from consts import GUARD_SPOTS, WEEK_DAYS
 
@@ -42,7 +42,43 @@ def get_today_day_of_week():
     # Get the name of the day of the week
     day_name = today.strftime("%A")
 
-    return day_name
+    ENGLISH_DAY_TO_HEBREW = {
+        'Sunday': 'א',
+        'Monday': 'ב',
+        'Tuesday': 'ג',
+        'Wednesday': 'ד',
+        'Thursday': 'ה',
+        'Friday': 'ו',
+        'Saturday': 'שבת',
+    }
+
+    return ENGLISH_DAY_TO_HEBREW[day_name]
+
+
+def get_week_dates_hebrew(day=None):
+    DAYS_IN_HEBREW = {
+        6: "ראשון",
+        0: "שני",
+        1: "שלישי",
+        2: "רביעי",
+        3: "חמישי",
+        4: "שישי",
+        5: "שבת",
+    }
+
+    # Use the provided day or default to today
+    if day:
+        start_of_week = day
+    else:
+        start_of_week = datetime.now()
+
+    # Generate the dates for 7 days starting from the base_date
+    week_dates = [(start_of_week + timedelta(days=i)).date() for i in range(7)]
+
+    # Format the dates and days into the desired format
+    formatted_dates = [f"{DAYS_IN_HEBREW[date.weekday()]} {date.strftime('%d.%m')}" for date in week_dates]
+
+    return formatted_dates
 
 
 def find_guard_slot(day, hour, spot, days):

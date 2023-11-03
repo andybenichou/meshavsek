@@ -1,3 +1,5 @@
+from typing import Union
+
 from Guard import Guard
 
 
@@ -59,7 +61,7 @@ class GuardsList:
         else:
             raise TypeError("Unsupported operand type for +: '{}'".format(type(other)))
 
-    def find(self, guard):
+    def find(self, guard: Union[Guard, str]) -> Union[Guard, None]:
         if not guard:
             return None
 
@@ -73,6 +75,7 @@ class GuardsList:
         for g in self.__guards:
             if g.name == guard_name:
                 return g
+
         return None
 
     def append(self, guard: Guard):

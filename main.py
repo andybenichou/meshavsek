@@ -1,4 +1,3 @@
-import os
 import random
 
 from collections import defaultdict
@@ -7,12 +6,13 @@ from itertools import cycle
 from Guard import Guard
 from GuardsList import GuardsList
 from consts import GUARD_SPOTS, TRIES_NUMBER, WEEK_DAYS, MINIMAL_DELAY, \
-    RANDOMNESS_LEVEL, PREVIOUS_FILE_NAME
+    RANDOMNESS_LEVEL, PREVIOUS_FILE_NAME, MISSING_GUARDS_FILE_NAME
 from export import export_to_excel
 from get_data import get_previous_data
 
 # List of guards
-from helper import get_next_week_day, get_today_day_of_week, find_guard_slot
+from get_missing_guards import get_missing_guards
+from helper import get_today_day_of_week, find_guard_slot
 
 
 guards_list = GuardsList(
@@ -70,19 +70,19 @@ guards_list = GuardsList(
            }])
      ])
 
-# List of missing guards each day
-missing_guards = {
-    'א': ['סדון', 'נפמן', 'לומיאנסקי', 'שגיא', 'אסרף'],
-    'ב': ['שמעון', 'דימה', 'שבצוב', 'אור', 'ניסנוב', 'נפמן', 'דורון'],
-    'ג': ['לואיס', 'ארד', 'קריספין', 'כלפה', 'אבנר', 'דעאל', 'לוטם', 'ניסנוב'],
-    'ד': ['שרעבי', 'דוד', 'אנדי', 'אנזו', 'ניסנוב', 'יואל',
-          'ליאור', 'סיני', 'לוטם'],
-    'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב', 'לישי', 'מרדש', 'אגומס'],
-    'ו': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
-          'יונג', 'שגיא'],
-    'שבת': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
-            'יונג', 'שגיא']
-}
+# # List of missing guards each day
+# missing_guards = {
+#     'א': ['סדון', 'נפמן', 'לומיאנסקי', 'שגיא', 'אסרף'],
+#     'ב': ['שמעון', 'דימה', 'שבצוב', 'אור', 'ניסנוב', 'נפמן', 'דורון'],
+#     'ג': ['לואיס', 'ארד', 'קריספין', 'כלפה', 'אבנר', 'דעאל', 'לוטם', 'ניסנוב'],
+#     'ד': ['שרעבי', 'דוד', 'אנדי', 'אנזו', 'ניסנוב', 'יואל',
+#           'ליאור', 'סיני', 'לוטם'],
+#     'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב', 'לישי', 'מרדש', 'אגומס', 'עמיחי'],
+#     'ו': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
+#           'יונג', 'שגיא'],
+#     'שבת': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
+#             'יונג', 'שגיא']
+# }
 
 
 # Define a custom exception for when the maximum number of iterations is reached
@@ -103,22 +103,6 @@ class ImpossibleToFillPlanning(Exception):
 
     def __str__(self):
         return self.message
-
-
-def get_guards_slots(watch_list, days, guards):
-    guard_slots = {guard.name: list() for guard in guards}
-
-    for guard in guards:
-        for day in watch_list:
-            for hour in watch_list[day]:
-                for spot in watch_list[day][hour]:
-                    if guard in watch_list[day][hour][spot]:
-                        slot = find_guard_slot(day, hour, spot, days)
-
-                        if slot and slot not in guard_slots[guard.name]:
-                            guard_slots[guard.name].append(slot)
-
-    return guard_slots
 
 
 def print_delays(bad_delays, too_good_delays):
@@ -142,6 +126,22 @@ def print_delays(bad_delays, too_good_delays):
     for g_d in too_good_delays:
         print(
             f'{g_d["guard"]} יש לו {g_d["delay"]} שעות מנוחה לפני המשמרת ביום {g_d["start"]["day"]} בשעה {g_d["start"]["hour"]}')
+
+
+def get_guards_slots(watch_list, days, guards):
+    guard_slots = {guard.name: list() for guard in guards}
+
+    for guard in guards:
+        for day in watch_list:
+            for hour in watch_list[day]:
+                for spot in watch_list[day][hour]:
+                    if guard in watch_list[day][hour][spot]:
+                        slot = find_guard_slot(day, hour, spot, days)
+
+                        if slot and slot not in guard_slots[guard.name]:
+                            guard_slots[guard.name].append(slot)
+
+    return guard_slots
 
 
 def check_guards_slots_delays(watch_list, days, guards, need_print=False):
@@ -387,6 +387,8 @@ def get_first_hour(watch_list, days):
             if h in watch_list[d].keys() and not first_hour:
                 return h
 
+    return 2
+
 
 def get_days(watch_list, days_input=None):
     if not days_input:
@@ -400,7 +402,7 @@ def get_days(watch_list, days_input=None):
             days_input = input("Please enter a valid integer. ")
 
     days = list(
-        watch_list.keys()) if watch_list.keys() else get_today_day_of_week()
+        watch_list.keys()) if watch_list.keys() else [get_today_day_of_week()]
     days_cycle = cycle(WEEK_DAYS)
 
     day = next(days_cycle)
@@ -422,50 +424,26 @@ def get_days(watch_list, days_input=None):
     return days, days_input, first_hour
 
 
-def enriched_guards_list(guards_list_prop, missing_guards_prop):
-    for guard in guards_list_prop:
-        for day in missing_guards_prop:
-            if guard in missing_guards_prop[day]:
-                if guard.is_living_far_away:
-                    time_obj = {
-                        'start': {'day': day, 'hour': 6},
-                        'end': {'day': get_next_week_day(day), 'hour': 16}
-                    }
-                else:
-                    time_obj = {
-                        'start': {'day': day, 'hour': 9},
-                        'end': {'day': get_next_week_day(day), 'hour': 12}
-                    }
-
-                guard.add_not_available_time(time_obj)
-
-
-def init_watch_list(guards, missing_guards_prop, print_missing_names):
+def init_watch_list(guards, print_missing_names):
     # Initialize the watch list
     watch_list = defaultdict(lambda: defaultdict(lambda: defaultdict(GuardsList)))
 
-    src_dir = os.path.dirname(os.path.abspath(__file__))
-    old_dir = os.path.join(src_dir, f'{PREVIOUS_FILE_NAME}.xlsx')
+    watch_list = get_previous_data(PREVIOUS_FILE_NAME, watch_list, guards,
+                                   GUARD_SPOTS, print_missing_names=print_missing_names)
 
-    enriched_guards_list(guards, missing_guards_prop)
+    missing_guards = get_missing_guards(MISSING_GUARDS_FILE_NAME, guards)
 
-    if os.path.exists(old_dir):
-        watch_list = get_previous_data(PREVIOUS_FILE_NAME, watch_list, guards,
-                                       GUARD_SPOTS, print_missing_names=print_missing_names)
-
-    return watch_list
+    return watch_list, missing_guards
 
 
-def plan(user_input_prop, guards, missing_guards_prop, print_missing_names,
-         retry_after_infinite_loop_num=0):
+def plan(user_input_prop, guards, print_missing_names, retry_after_infinite_loop_num=0):
     try:
-        if retry_after_infinite_loop_num >= 100:
+        if retry_after_infinite_loop_num >= 20:
             raise ImpossibleToFillPlanning("Watch list can't be filled with this context, "
                                            "try to recruit more guards, remove some guard spots "
                                            "or reduce the MINIMAL_DELAY between each guard in consts file")
 
-        watch_list = init_watch_list(guards, missing_guards_prop,
-                                     print_missing_names)
+        watch_list, _ = init_watch_list(guards, print_missing_names)
 
         days, user_i, first_hour = get_days(watch_list, days_input=user_input_prop)
 
@@ -474,7 +452,7 @@ def plan(user_input_prop, guards, missing_guards_prop, print_missing_names,
 
     except MaxIterationsReached:
         print("Maximum number of iterations reached, retrying...")
-        return plan(user_input_prop, guards, missing_guards_prop, print_missing_names,
+        return plan(user_input_prop, guards, print_missing_names,
                     retry_after_infinite_loop_num=retry_after_infinite_loop_num + 1)
 
     return user_i, days, delays_num, watch_list
@@ -487,7 +465,6 @@ if __name__ == '__main__':
     user_input = None
     while try_num < TRIES_NUMBER:
         user_input, days_list, delays, wl = plan(user_input, guards_list,
-                                                 missing_guards,
                                                  try_num == 0)
 
         if not min_delays or delays < min_delays:
@@ -502,5 +479,8 @@ if __name__ == '__main__':
             export_to_excel('watch_list', best_wl, days_list, GUARD_SPOTS)
             check_guards_slots_delays(best_wl, days_list, guards_list,
                                       need_print=True)
+
+        if user_input == '0':
+            break
 
     print('\nShivsakta!')
