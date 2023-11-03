@@ -5,14 +5,18 @@ from copy import deepcopy
 from itertools import cycle
 
 from GuardsList import GuardsList
+from Room import Room
 from consts import TRIES_NUMBER, WEEK_DAYS, MINIMAL_DELAY, \
-    RANDOMNESS_LEVEL, PREVIOUS_FILE_NAME, MISSING_GUARDS_FILE_NAME, GUARD_SPOTS
+    RANDOMNESS_LEVEL, PREVIOUS_FILE_NAME, MISSING_GUARDS_FILE_NAME, \
+    GUARD_SPOTS, NEW_WATCH_LIST_FILE_NAME, FIRST_HOUR_FIRST_DAY, \
+    LAST_HOUR_LAST_DAY, RETRIES_NUM_BEFORE_CRASH, KITAT_KONENOUT_DURATION, \
+    MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT
 from export import export_to_excel
 from get_previous_data import get_previous_data
 from get_missing_guards import get_missing_guards
 from helper import get_today_day_of_week, find_guard_slot
 
-from guards_properties import GUARDS_LIST
+from guards_properties import GUARDS_LIST, ROOMS_LIST
 
 
 class MaxIterationsReached(Exception):
@@ -64,7 +68,7 @@ def get_guards_slots(watch_list, days, guards):
     for guard in guards:
         for day in watch_list:
             for hour in watch_list[day]:
-                for spot in watch_list[day][hour]:
+                for spot in GUARD_SPOTS:
                     if guard in watch_list[day][hour][spot]:
                         slot = find_guard_slot(day, hour, spot, days)
 
@@ -304,23 +308,121 @@ def get_guards(guards_list_prop: GuardsList, watch_list, guard_cycle, day,
     return guards
 
 
+def find_room(rooms, room):
+    if isinstance(room, Room):
+        room_number = room.number
+    else:
+        room_number = room
+
+    for room in rooms:
+        if room.number == room_number:
+            return room
+    return None
+
+
+def find_last_duty_room_number(duty_rooms):
+    if duty_rooms.keys():
+        return duty_rooms[list(duty_rooms.keys())[-1]]
+
+
+def find_kitat_konenout(watch_list, kitot_konenout_dict, rooms, day, hour, days):
+    if day in kitot_konenout_dict \
+            and hour in kitot_konenout_dict[day] \
+            and kitot_konenout_dict[day][hour]:
+        return kitot_konenout_dict[day][hour]
+
+    kitot_konenout_rooms = list()
+    for day in kitot_konenout_dict:
+        for h in kitot_konenout_dict[day]:
+            kitat_konenout = kitot_konenout_dict[day][h]
+            if kitat_konenout:
+                found_room = find_room(rooms, kitat_konenout)
+                if found_room and found_room.can_be_kitat_konenout \
+                        and (not kitot_konenout_rooms or found_room != kitot_konenout_rooms[-1]):
+                    kitot_konenout_rooms.append(found_room)
+
+    for room in rooms:
+        if room not in kitot_konenout_rooms and room.can_be_kitat_konenout:
+            kitot_konenout_rooms.insert(0, room)
+
+    sorted_rooms = sorted(kitot_konenout_rooms, key=lambda r: r.get_available_guards_number(watch_list, day, hour, days), reverse=True)
+
+    i = 5
+    while True:
+        for room in sorted_rooms:
+            available_soldiers = room.get_available_guards_number(watch_list, day, hour, days)
+            if room.number not in [r.number
+                                   for r in kitot_konenout_rooms[len(kitot_konenout_rooms) - i:]] \
+                    and available_soldiers >= MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT:
+                return room.number
+
+        if i == 0:
+            for room in sorted_rooms:
+                if room.number not in [r.number
+                                       for r in kitot_konenout_rooms[len(kitot_konenout_rooms) - 4:]]:
+                    return room.number
+
+        i -= 1
+
+
+def complete_duty_room(duty_rooms, day, rooms):
+    if day not in duty_rooms:
+        last_duty_room_number = find_last_duty_room_number(duty_rooms)
+        rooms_cycle = cycle(rooms)
+        room = next(rooms_cycle)
+
+        if last_duty_room_number:
+            while room.number != last_duty_room_number:
+                room = next(rooms_cycle)
+
+            room = next(rooms_cycle)
+
+        first_room_in_loop = room
+        while not room.can_be_toran:
+            room = next(rooms_cycle)
+
+            # No room can be toran
+            if room == first_room_in_loop:
+                room = None
+                break
+
+        if room:
+            duty_rooms[day] = room.number
+
+
 def get_watch_list_data(guards_list_prop: GuardsList, watch_list, days,
-                        first_hour_prop):
+                        first_hour_prop, duty_rooms, rooms: [Room],
+                        kitot_konenout_dict):
     currently_missing_guards = GuardsList()
     same_time_partners = GuardsList()
 
     # Assign guards to each slot
     guard_cycle = cycle(guards_list_prop)
+    kitat_konenout = None
+    kitat_konenout_duration = 0
     for day in days:
+        complete_duty_room(duty_rooms, day, rooms)
+
         for hour in range(24):
             if day == days[0] and hour < first_hour_prop:
                 continue
 
             # Remove unnecessary start and end of planning
-            if (days.index(day) == 0 and hour < 2) or \
+            if (days.index(day) == 0 and hour < FIRST_HOUR_FIRST_DAY) or \
                     (days.index(day) == len(days) - 1
-                     and hour >= 20):
+                     and hour >= LAST_HOUR_LAST_DAY):
                 continue
+
+            # Complete kitot konenout
+            if kitat_konenout_duration == KITAT_KONENOUT_DURATION:
+                kitat_konenout = None
+                kitat_konenout_duration = 0
+
+            if not kitat_konenout:
+                kitat_konenout = find_kitat_konenout(watch_list, kitot_konenout_dict, rooms, day, hour, days)
+
+            kitot_konenout_dict[day][hour] = kitat_konenout
+            kitat_konenout_duration += 1
 
             spots = list(GUARD_SPOTS.keys())
             random.shuffle(spots)
@@ -387,29 +489,44 @@ def get_days(watch_list, days_input=None):
     return days, days_input, first_hour
 
 
+def get_rooms(rooms_list, guards):
+    rooms = list()
+    for room_dict in rooms_list:
+        room_guards = GuardsList([guards.find(guard)
+                                  for guard in room_dict['guards']])
+        room = Room(number=room_dict['number'], guards=room_guards,
+                    can_be_toran=room_dict['can_be_toran'],
+                    can_be_kitat_konenout=room_dict['can_be_kitat_konenout'])
+
+        if room not in rooms:
+            rooms.append(room)
+
+    return rooms
+
+
 def init_watch_list(guards, print_missing_names):
     # Initialize the watch list
     watch_list = defaultdict(lambda: defaultdict(lambda: defaultdict(GuardsList)))
-
-    watch_list = get_previous_data(PREVIOUS_FILE_NAME, watch_list, guards,
-                                   GUARD_SPOTS, print_missing_names=print_missing_names)
-
+    watch_list, duty_rooms, kitot_konenout_dict = \
+        get_previous_data(PREVIOUS_FILE_NAME, watch_list, guards, GUARD_SPOTS,
+                          print_missing_names=print_missing_names)
     missing_guards = get_missing_guards(MISSING_GUARDS_FILE_NAME, guards)
+    rooms = get_rooms(ROOMS_LIST, guards)
 
-    return watch_list, missing_guards
+    return watch_list, duty_rooms, kitot_konenout_dict, rooms, missing_guards
 
 
 def plan(user_input_prop, guards, print_missing_names, retry_after_infinite_loop_num=0):
-    watch_list, _ = init_watch_list(guards, print_missing_names)
+    watch_list, duty_rooms, kitot_konenout_dict, rooms, _ = init_watch_list(guards, print_missing_names)
     days, user_i, first_hour = get_days(watch_list, days_input=user_input_prop)
 
     try:
-        if retry_after_infinite_loop_num >= 20:
+        if retry_after_infinite_loop_num >= RETRIES_NUM_BEFORE_CRASH:
             raise ImpossibleToFillPlanning("Watch list can't be filled with this context, "
                                            "try to recruit more guards, remove some guard spots "
                                            "or reduce the MINIMAL_DELAY between each guard in consts file")
 
-        watch_list = get_watch_list_data(guards, watch_list, days, first_hour)
+        watch_list = get_watch_list_data(guards, watch_list, days, first_hour, duty_rooms, rooms, kitot_konenout_dict)
         delays_num = check_guards_slots_delays(watch_list, days, guards)
 
     except MaxIterationsReached:
@@ -417,7 +534,7 @@ def plan(user_input_prop, guards, print_missing_names, retry_after_infinite_loop
         return plan(user_i, guards, print_missing_names,
                     retry_after_infinite_loop_num=retry_after_infinite_loop_num + 1)
 
-    return user_i, days, delays_num, watch_list
+    return user_i, days, delays_num, watch_list, duty_rooms, kitot_konenout_dict
 
 
 if __name__ == '__main__':
@@ -427,10 +544,12 @@ if __name__ == '__main__':
     user_input = None
     days_list = list()
     guards_list = None
+    duty_room_per_day = dict()
+    kitot_konenout = dict()
     while try_num < TRIES_NUMBER:
         guards_list = deepcopy(GUARDS_LIST)
-        user_input, days_list, delays, wl = plan(user_input, guards_list,
-                                                 try_num == 0)
+        user_input, days_list, delays, wl, duty_room_per_day, kitot_konenout = \
+            plan(user_input, guards_list, try_num == 0)
 
         if not min_delays or delays < min_delays:
             min_delays = delays
@@ -443,7 +562,7 @@ if __name__ == '__main__':
         if user_input == '0':
             break
 
-    export_to_excel('watch_list', best_wl, days_list, GUARD_SPOTS)
+    export_to_excel(NEW_WATCH_LIST_FILE_NAME, best_wl, days_list, GUARD_SPOTS, duty_room_per_day, kitot_konenout)
     check_guards_slots_delays(best_wl, days_list, guards_list,
                               need_print=True)
 

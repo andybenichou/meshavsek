@@ -54,7 +54,7 @@ GUARDS_LIST = GuardsList(
      Guard('בן', is_guarding=False),
      Guard('נח', is_guarding=False),
      Guard('לישי', is_guarding=False, is_living_far_away=True),
-     Guard('מאור', is_guarding=False),
+     Guard('מאור ניקחה', is_guarding=False),
      Guard('רועי', is_guarding=False),
      Guard('משה החופל', is_guarding=False,
            spots_preferences=['פנטאוז'],
@@ -89,13 +89,53 @@ MISSING_GUARDS = {
             'יונג', 'שגיא']
 }
 
-ROOMS_LIST = {
-    5: ['נפמן', 'סדון', 'סיני', 'לואיס', 'עמיחי', 'אסרף'],
-    6: ['משה', 'דעאל', 'דוד', 'אנדי', 'אנזו'],
-    7: ['מאור', 'קריספין', 'אגומס', 'ניסנוב', 'שגיא', 'אבנר'],
-    8: ['אסף', 'שבצוב', 'דימה', 'דימנטמן', 'מטמוני'],
-    9: ['רווה', 'אור', 'יונג', 'לוטם', 'לישי'],
-    10: ['מרדש', 'איתי בהן', 'דבוש', 'פיאצה', 'שרעבי', 'שראל'],
-    11: ['יואל', 'כלפה', 'ארד', 'דובר', 'לומיאנסקי', 'שמעון'],
-    12: ['דותן', 'ליאור', 'נח', 'בן', 'רועי']
-}
+ROOMS_LIST = [
+    {
+        'number': 5,
+        'guards': ['נפמן', 'סדון', 'סיני', 'לואיס', 'עמיחי', 'אסרף'],
+        'can_be_toran': True,
+        'can_be_kitat_konenout': True,
+    },
+    {
+        'number': 6,
+        'guards': ['משה', 'דעאל', 'דוד', 'אנדי', 'אנזו'],
+        'can_be_toran': True,
+        'can_be_kitat_konenout': True,
+    },
+    {
+        'number': 7,
+        'guards': ['מאור ניקחה', 'קריספין', 'אגומס', 'ניסנוב', 'שגיא', 'אבנר'],
+        'can_be_toran': True,
+        'can_be_kitat_konenout': True,
+    },
+    {
+        'number': 8,
+        'guards': ['אסף', 'שבצוב', 'דימה', 'דימנטמן', 'מטמוני'],
+        'can_be_toran': True,
+        'can_be_kitat_konenout': True,
+    },
+    {
+        'number': 9,
+        'guards': ['רווה', 'אור', 'יונג', 'לוטם', 'לישי'],
+        'can_be_toran': True,
+        'can_be_kitat_konenout': True,
+    },
+    {
+        'number': 10,
+        'guards': ['מרדש', 'איתי בהן', 'דבוש', 'פיאצה', 'שרעבי', 'שראל'],
+        'can_be_toran': True,
+        'can_be_kitat_konenout': True,
+    },
+    {
+        'number': 11,
+        'guards': ['יואל', 'כלפה', 'ארד', 'דובר', 'לומיאנסקי', 'שמעון'],
+        'can_be_toran': True,
+        'can_be_kitat_konenout': True,
+    },
+    {
+        'number': 12,
+        'guards': ['דותן', 'ליאור', 'נח', 'בן', 'רועי'],
+        'can_be_toran': False,
+        'can_be_kitat_konenout': False,
+    },
+]

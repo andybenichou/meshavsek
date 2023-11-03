@@ -76,7 +76,6 @@ def get_missing_guards(file_name, guards: GuardsList):
 
     not_known_guards = list()
     missing_guards = {date: list() for date in curr_week_days}
-    # Iterate through the rows
     for index, row in df.iterrows():
         for date in missing_guards:
             date_key = date

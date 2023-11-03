@@ -4,6 +4,8 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
 
+from consts import FIRST_HOUR_FIRST_DAY, LAST_HOUR_LAST_DAY
+
 
 def export_to_CSV(watch_list, days, guard_spots):
     with open('watch_list.csv', 'w', newline='') as csvfile:
@@ -22,14 +24,14 @@ def export_to_CSV(watch_list, days, guard_spots):
                 csvwriter.writerow(row)
 
 
-def get_excel_data_frame(watch_list, days, guard_spots):
-    columns = ['יום', 'שעה'] + list(guard_spots.keys())
+def get_excel_data_frame(watch_list, days, guard_spots, duty_room_per_day, kitot_konenout):
+    columns = ['יום', 'שעה'] + list(guard_spots.keys()) + ['כתת כוננות']
     data = list()
 
     for day in days:
         for hour in range(24):
-            if (days.index(day) == 0 and hour < 2) or (
-                    days.index(day) == len(days) - 1 and hour >= 20):
+            if (days.index(day) == 0 and hour < FIRST_HOUR_FIRST_DAY) or \
+                    (days.index(day) == len(days) - 1 and hour >= LAST_HOUR_LAST_DAY):
                 continue
 
             time_for_excel = f'{hour:02d}:00'  # formatted for Excel
@@ -38,13 +40,25 @@ def get_excel_data_frame(watch_list, days, guard_spots):
             for spot in guard_spots.keys():
                 guards_str = '\n'.join(
                     [g.name for g in watch_list[day][hour][spot]]) \
-                    if watch_list[day][hour][spot] else ' '
-                row.append(guards_str)
+                    if watch_list[day][hour][spot] else ''
+
+                if spot == 'פטרול' and not guards_str \
+                        and day in duty_room_per_day:
+                    row.append(f'{duty_room_per_day[day]} תורני רס"פ - חדר')
+
+                elif guards_str:
+                    row.append(guards_str)
 
             is_row_empty = True
             for guards_str in row[2:]:
                 if len(guards_str) > 1:
                     is_row_empty = False
+
+            if not is_row_empty \
+                    and day in kitot_konenout \
+                    and hour in kitot_konenout[day] \
+                    and kitot_konenout[day][hour]:
+                row.append(f'{kitot_konenout[day][hour]} חדר')
 
             if not is_row_empty:
                 data.append(row)
@@ -102,8 +116,8 @@ def format_excel(df, worksheet):
     adjust_columns_and_rows(worksheet)
 
 
-def export_to_excel(file_name, watch_list, days, guard_spots):
-    df = get_excel_data_frame(watch_list, days, guard_spots)
+def export_to_excel(file_name, watch_list, days, guard_spots, duty_room_per_day, kitot_konenout):
+    df = get_excel_data_frame(watch_list, days, guard_spots, duty_room_per_day, kitot_konenout)
 
     # Save to Excel
     excel_path = f'{file_name}.xlsx'

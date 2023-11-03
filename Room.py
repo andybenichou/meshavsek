@@ -4,12 +4,15 @@ from GuardsList import GuardsList
 
 
 class Room:
-    def __init__(self, number, guards: GuardsList):
+    def __init__(self, number, guards: GuardsList, can_be_toran=True,
+                 can_be_kitat_konenout=True):
         self.number = number
         self.__guards = guards
+        self.can_be_toran = can_be_toran
+        self.can_be_kitat_konenout = can_be_kitat_konenout
 
     def __repr__(self):
-        return f"Room(number={self.number!r}, guards={self.__guards!r})"
+        return f"Room(number={self.number!r})"
 
     def __str__(self):
         return f"Room number {self.number}, with guards: {self.__guards}"
@@ -41,10 +44,10 @@ class Room:
     def __len__(self):
         return len(self.__guards)
 
-    # Helper function to check if a guard is available
     def get_available_guards_number(self, watch_list, day, hour, days):
         return reduce(lambda acc,
                       guard: acc + (1 if guard.is_available(watch_list, day,
-                                                            hour, days)
+                                                            hour, days,
+                                                            delays_prop=[0])
                                     else 0),
                       self.__guards, 0)
