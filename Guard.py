@@ -6,17 +6,17 @@ from helper import get_prec_day, find_guard_slot
 
 
 class Guard:
-    def __init__(self, name, partner=None, guards_slots=None,
-                 not_available_times=None,
+    def __init__(self, name, partner=None, same_time_partners=None,
+                 guards_slots=None, not_available_times=None,
                  is_guarding=True, is_living_far_away=False,
                  spots_preferences=None, time_preferences=None,
                  last_spot=None, room=None):
         self.name = name
         self.partner = partner
+        self.same_time_partners = same_time_partners if same_time_partners else list()
         self.__guards_slots = guards_slots if guards_slots else list()
         self.__not_available_times = not_available_times \
             if not_available_times else list()
-
         self.is_guarding = is_guarding
         self.is_living_far_away = is_living_far_away
         self.spots_preferences = spots_preferences
@@ -37,7 +37,8 @@ class Guard:
 
     def __deepcopy__(self, memo=None):
         # Create a new instance with 'None' for deep attributes initially to avoid recursive deepcopy calls
-        new_guard = Guard(self.name, self.partner, None, None,
+        new_guard = Guard(self.name, self.partner, self.same_time_partners,
+                          None, None,
                           self.is_guarding, self.is_living_far_away,
                           self.spots_preferences, self.time_preferences,
                           self.last_spot)

@@ -1,7 +1,8 @@
 from Guard import Guard
 from GuardsList import GuardsList
 
-from consts import GUARD_SPOTS
+from consts import GUARD_SPOTS, WEEK_DAYS
+from helper import get_next_week_day
 
 GUARDS_LIST = GuardsList(
     [Guard('יואל', partner='ארד'),
@@ -11,20 +12,12 @@ GUARDS_LIST = GuardsList(
      Guard('משה'),
      Guard('יונג'),
      Guard('דורון'),
-     Guard('אסרף'),
-     Guard('שגיא', not_available_times=[{
-         'start': {
-             'day': 'ו',
-             'hour': 2,
-         },
-         'end': {
-             'day': 'ו',
-             'hour': 20,
-         },
-     }]),
-     Guard('אנדי', partner='דוד'),
-     Guard('אנזו'),
-     Guard('דוד', partner='אנדי'),
+     Guard('אסרף', partner='אסף'),
+     Guard('אסף', partner='אסרף'),
+     Guard('שגיא'),
+     Guard('אנדי', partner='דוד', same_time_partners=['אנזו']),
+     Guard('אנזו', same_time_partners=['דוד', 'אנדי']),
+     Guard('דוד', partner='אנדי', same_time_partners=['אנזו']),
      Guard('דימנטמן', partner='מטמוני'),
      Guard('מטמוני', partner='דימנטמן'),
      Guard('דעאל', partner='אגומס'),
@@ -41,18 +34,22 @@ GUARDS_LIST = GuardsList(
      Guard('דותן'),
      Guard('קריספין', partner='רווה', is_living_far_away=True),
      Guard('רווה', partner='קריספין'),
-     Guard('דבוש', partner='פיאצה', is_living_far_away=True),
-     Guard('פיאצה', partner='דבוש', is_living_far_away=True),
-     Guard('שראל', partner='שרעבי', is_living_far_away=True),
-     Guard('שרעבי', partner='שראל'),
-     Guard('אסף'),
+     Guard('דבוש', partner='פיאצה', is_living_far_away=True,
+           same_time_partners=['שראל', 'שרעבי']),
+     Guard('פיאצה', partner='דבוש', is_living_far_away=True,
+           same_time_partners=['שראל', 'שרעבי']),
+     Guard('שראל', partner='שרעבי', is_living_far_away=True,
+           same_time_partners=['דבוש', 'פיאצה']),
+     Guard('שרעבי', partner='שראל',
+           same_time_partners=['דבוש', 'פיאצה']),
      Guard('דימה', partner='שבצוב'),
      Guard('שבצוב', partner='דימה'),
      Guard('נפמן', partner='סדון'),
      Guard('סדון', partner='נפמן'),
      Guard('סיני', partner='לוטם'),
      Guard('לוטם', partner='סיני'),
-     Guard('אור', spots_preferences=list(filter(lambda spot: spot != 'ש.ג.', GUARD_SPOTS.keys()))),
+     Guard('אור', spots_preferences=list(
+         filter(lambda spot: spot != 'ש.ג.', GUARD_SPOTS.keys()))),
      Guard('מרדש', is_living_far_away=True),
      Guard('בן', is_guarding=False),
      Guard('נח', is_guarding=False),
@@ -64,9 +61,18 @@ GUARDS_LIST = GuardsList(
            time_preferences=[{
                'start': 5,
                'end': 8,
-           }])
+           }],
+           not_available_times=[{
+               'start': {
+                   'day': day,
+                   'hour': 8,
+               },
+               'end': {
+                   'day': get_next_week_day(day),
+                   'hour': 5,
+               }
+           } for day in WEEK_DAYS])
      ])
-
 
 # List of missing guards each day (not in use)
 MISSING_GUARDS = {
@@ -75,13 +81,13 @@ MISSING_GUARDS = {
     'ג': ['לואיס', 'ארד', 'קריספין', 'כלפה', 'אבנר', 'דעאל', 'לוטם', 'ניסנוב'],
     'ד': ['שרעבי', 'דוד', 'אנדי', 'אנזו', 'ניסנוב', 'יואל',
           'ליאור', 'סיני', 'לוטם'],
-    'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב', 'לישי', 'מרדש', 'אגומס', 'עמיחי'],
+    'ה': ['אסף', 'פיאצה', 'רווה', 'דבוש', 'משה', 'שראל', 'ניסנוב', 'לישי',
+          'מרדש', 'אגומס', 'עמיחי'],
     'ו': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
           'יונג', 'שגיא'],
     'שבת': ['אלכסיי', 'דותן', 'דובר', 'עמיחי', 'מטמוני', 'דימנטמן', 'ניסנוב',
             'יונג', 'שגיא']
 }
-
 
 ROOMS_LIST = {
     5: ['נפמן', 'סדון', 'סיני', 'לואיס', 'עמיחי', 'אסרף'],
