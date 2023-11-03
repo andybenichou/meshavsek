@@ -6,7 +6,7 @@ from itertools import cycle
 
 from Guard import Guard
 from GuardsList import GuardsList
-from consts import GUARD_SPOTS, TRIES_NUMBER, WEEK_DAYS, CRITICAL_DELAY, \
+from consts import GUARD_SPOTS, TRIES_NUMBER, WEEK_DAYS, MINIMAL_DELAY, \
     RANDOMNESS_LEVEL, PREVIOUS_FILE_NAME
 from export import export_to_excel
 from get_data import get_previous_data
@@ -95,6 +95,16 @@ class MaxIterationsReached(Exception):
         return self.message
 
 
+# Define a custom exception for when the guard planning can't be filled
+class ImpossibleToFillPlanning(Exception):
+    def __init__(self, message="Impossible to fill planning"):
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self):
+        return self.message
+
+
 def get_guards_slots(watch_list, days, guards):
     guard_slots = {guard.name: list() for guard in guards}
 
@@ -156,13 +166,13 @@ def check_guards_slots_delays(watch_list, days, guards, need_print=False):
 
                 delay = start_hour - last_slot['end']['hour']
 
-                if delay <= CRITICAL_DELAY:
+                if delay <= MINIMAL_DELAY:
                     bad_delays.append({
                         'guard': guard,
                         'delay': delay,
                         'start': slot['start'],
                     })
-                elif CRITICAL_DELAY + 3 < delay <= CRITICAL_DELAY + 12:
+                elif MINIMAL_DELAY + 3 < delay <= MINIMAL_DELAY + 12:
                     too_good_delays.append({
                         'guard': guard,
                         'delay': delay,
@@ -446,8 +456,14 @@ def init_watch_list(guards, missing_guards_prop, print_missing_names):
     return watch_list
 
 
-def plan(user_input_prop, guards, missing_guards_prop, print_missing_names):
+def plan(user_input_prop, guards, missing_guards_prop, print_missing_names,
+         retry_after_infinite_loop_num=0):
     try:
+        if retry_after_infinite_loop_num >= 100:
+            raise ImpossibleToFillPlanning("Watch list can't be filled with this context, "
+                                           "try to recruit more guards, remove some guard spots "
+                                           "or reduce the MINIMAL_DELAY between each guard in consts file")
+
         watch_list = init_watch_list(guards, missing_guards_prop,
                                      print_missing_names)
 
@@ -458,7 +474,8 @@ def plan(user_input_prop, guards, missing_guards_prop, print_missing_names):
 
     except MaxIterationsReached:
         print("Maximum number of iterations reached, retrying...")
-        return plan(user_input_prop, guards, missing_guards_prop, print_missing_names)
+        return plan(user_input_prop, guards, missing_guards_prop, print_missing_names,
+                    retry_after_infinite_loop_num=retry_after_infinite_loop_num + 1)
 
     return user_i, days, delays_num, watch_list
 

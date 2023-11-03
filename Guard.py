@@ -1,7 +1,7 @@
 from itertools import cycle
 
 # Define the week days
-from consts import CRITICAL_DELAY, GUARD_SPOTS
+from consts import MINIMAL_DELAY, GUARD_SPOTS
 from helper import get_prec_day, find_guard_slot
 
 week_days = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'שבת']
@@ -92,7 +92,7 @@ class Guard:
             if not in_time_preferences:
                 return False
 
-        for rest_delay in (delays_prop if delays_prop else list(range(0, CRITICAL_DELAY + 1, 3))):
+        for rest_delay in (delays_prop if delays_prop else list(range(0, MINIMAL_DELAY + 1, 3))):
             updated_hour = hour - rest_delay
             updated_day = day
 
