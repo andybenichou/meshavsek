@@ -23,17 +23,15 @@ class GuardsList:
         return f"GuardList(guards={self.__guards!r})"
 
     def __str__(self):
-        return ', '.join([guard.name for guard in self.__guards])
+        return ', '.join([str(guard) for guard in self.__guards])
 
     def __contains__(self, guard):
         if isinstance(guard, Guard):
-            guard_name = guard.name
+            return guard in self.__guards
         elif isinstance(guard, str):
-            guard_name = guard
+            return guard in [str(g) for g in self.__guards]
         else:
             raise TypeError("Guard must be a Guard object or a string")
-
-        return guard_name in [g.name for g in self.__guards]
 
     def __getitem__(self, index):
         if isinstance(index, slice):
@@ -86,16 +84,12 @@ class GuardsList:
         if not guard:
             return None
 
-        if isinstance(guard, Guard):
-            guard_name = guard.name
-        elif isinstance(guard, str):
-            guard_name = guard
+        if isinstance(guard, Guard) or isinstance(guard, str):
+            for g in self.__guards:
+                if g == guard:
+                    return g
         else:
             raise TypeError("Guard must be a Guard object or a string")
-
-        for g in self.__guards:
-            if g.name == guard_name:
-                return g
 
         return None
 
@@ -114,39 +108,24 @@ class GuardsList:
             self.append(guard)
 
     def remove(self, guard):
-        if isinstance(guard, Guard):
-            guard_name = guard.name
-        elif isinstance(guard, str):
-            guard_name = guard
+        if isinstance(guard, Guard) or isinstance(guard, str):
+            if guard in self.__guards:
+                self.__guards.remove(guard)
         else:
             raise TypeError("Guard must be a Guard object or a string")
-
-        guard_obj = None
-        for g in self.__guards:
-            if g.name == guard_name:
-                guard_obj = g
-
-        if not guard_obj:
-            return
-
-        self.__guards.remove(guard_obj)
 
     def index(self, guard):
-        if isinstance(guard, Guard):
-            guard_name = guard.name
-        elif isinstance(guard, str):
-            guard_name = guard
+        if isinstance(guard, Guard) or isinstance(guard, str):
+            if self.__contains__(guard):
+                i = 0
+                while i < len(self.__guards):
+                    if self.__guards[i] == guard:
+                        return i
+                    i += 1
+            else:
+                raise ValueError("Guard not in list")
         else:
             raise TypeError("Guard must be a Guard object or a string")
-
-        if self.__contains__(guard_name):
-            i = 0
-            while i < len(self.__guards):
-                if self.__guards[i].name == guard_name:
-                    return i
-                i += 1
-        else:
-            raise ValueError("Guard not in list")
 
     def get_current_guard(self):
         return self.__current_guard
@@ -155,4 +134,4 @@ class GuardsList:
         self.__current_guard = new_guard
 
     def sort(self):
-        self.__guards.sort(key=lambda guard: guard.name)
+        self.__guards.sort(key=lambda guard: (guard.last_name, guard.first_name))

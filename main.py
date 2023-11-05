@@ -2,6 +2,7 @@ import random
 
 from collections import defaultdict
 from copy import deepcopy
+from datetime import datetime
 from itertools import cycle
 
 from GuardsList import GuardsList
@@ -10,11 +11,11 @@ from consts import TRIES_NUMBER, WEEK_DAYS, MINIMAL_DELAY, \
     RANDOMNESS_LEVEL, PREVIOUS_FILE_NAME, MISSING_GUARDS_FILE_NAME, \
     GUARD_SPOTS, NEW_WATCH_LIST_FILE_NAME, FIRST_HOUR_FIRST_DAY, \
     LAST_HOUR_LAST_DAY, RETRIES_NUM_BEFORE_CRASH, KITAT_KONENOUT_DURATION, \
-    MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT
+    MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT, MISSING_GUARDS_SHEET_NAME
 from export import export_to_excel
 from get_previous_data import get_previous_data
 from get_missing_guards import get_missing_guards
-from helper import get_today_day_of_week, find_guard_slot
+from helper import get_day_of_week, find_guard_slot
 
 from guards_properties import GUARDS_LIST, ROOMS_LIST
 
@@ -45,7 +46,7 @@ def print_delays(bad_delays, too_good_delays, days):
     bad_delays = sorted(bad_delays, key=lambda x: (day_to_num[x['start']['day']], x['start']['hour']))
     too_good_delays = sorted(too_good_delays, key=lambda x: (day_to_num[x['start']['day']], x['start']['hour']))
 
-    if bad_delays or too_good_delays:
+    if bad_delays:
         print()
         print('Bad delays:')
 
@@ -53,7 +54,7 @@ def print_delays(bad_delays, too_good_delays, days):
         print(
             f'{b_d["guard"]} יש לו רק {b_d["delay"]} שעות מנוחה לפני המשמרת ביום {b_d["start"]["day"]} בשעה {b_d["start"]["hour"]}')
 
-    if bad_delays:
+    if too_good_delays:
         print()
         print('Good delays:')
 
@@ -63,7 +64,7 @@ def print_delays(bad_delays, too_good_delays, days):
 
 
 def get_guards_slots(watch_list, days, guards):
-    guard_slots = {guard.name: list() for guard in guards}
+    guard_slots = {str(guard): list() for guard in guards}
 
     for guard in guards:
         for day in watch_list:
@@ -71,9 +72,8 @@ def get_guards_slots(watch_list, days, guards):
                 for spot in GUARD_SPOTS:
                     if guard in watch_list[day][hour][spot]:
                         slot = find_guard_slot(day, hour, spot, days)
-
-                        if slot and slot not in guard_slots[guard.name]:
-                            guard_slots[guard.name].append(slot)
+                        if slot and slot not in guard_slots[str(guard)]:
+                            guard_slots[str(guard)].append(slot)
 
     return guard_slots
 
@@ -131,6 +131,7 @@ def align_guards_cycle(watch_list, guard_cycle_prop,
         guard = next(guard_cycle_prop)
         guards_list_prop.set_current_guard(guard)
 
+    first_guard = guard
     while not guard.is_available(watch_list, day, hour, days):
         if guard.is_missing(day, hour):
             currently_missing_guards.append(guard)
@@ -138,18 +139,26 @@ def align_guards_cycle(watch_list, guard_cycle_prop,
         guard = next(guard_cycle_prop)
         guards_list_prop.set_current_guard(guard)
 
+        if guard == first_guard:
+            raise MaxIterationsReached
+
     return guard
 
 
 def get_random_guards(watch_list, buff_cycle, same_time_partners,
                       currently_missing_guards, day, hour, spot, days, guards):
     random_guards = list()
+    MAX_ITERATIONS = len(GUARDS_LIST) * len(days) * 10  # Set a maximum limit for the number of iterations
+    iteration_count = 0
     while len(random_guards) != RANDOMNESS_LEVEL:
-        guard = None
+        if iteration_count > MAX_ITERATIONS:
+            raise MaxIterationsReached
 
+        iteration_count += 1
+
+        guard = None
         for g in same_time_partners:
-            if g.is_available(watch_list, day, hour, days,
-                              spot=spot):
+            if g.is_available(watch_list, day, hour, days, spot=spot):
                 guard = g
                 same_time_partners.remove(g)
 
@@ -159,8 +168,7 @@ def get_random_guards(watch_list, buff_cycle, same_time_partners,
 
         if not guard:
             for g in currently_missing_guards:
-                if g.is_available(watch_list, day, hour, days,
-                                  spot=spot):
+                if g.is_available(watch_list, day, hour, days, spot=spot):
                     guard = g
                     currently_missing_guards.remove(g)
                     break
@@ -189,7 +197,7 @@ def get_next_available_guard(guards_list_prop: GuardsList,
     index = guards_list_prop.index(curr_guard)
     buff_cycle = cycle(guards_list_prop[index:] + guards_list_prop[:index])
 
-    MAX_ITERATIONS = len(guards_list_prop) * len(days) * 8  # Set a maximum limit for the number of iterations
+    MAX_ITERATIONS = len(guards_list_prop) * len(days) * 10  # Set a maximum limit for the number of iterations
     iteration_count = 0
     chosen_guards = None
     while True:
@@ -208,7 +216,8 @@ def get_next_available_guard(guards_list_prop: GuardsList,
             partner = guards_list_prop.find(guard.partner)
             if partner:
                 if not partner.is_available(watch_list, day, hour,
-                                            days, delays_prop=[0, 3, 6]):
+                                            days, spot=spot,
+                                            delays_prop=[0, 3, 6]):
                     chosen_guards = (guard, None)
                     break
 
@@ -236,7 +245,8 @@ def get_next_available_guard(guards_list_prop: GuardsList,
                     if partner not in same_time_partners:
                         partner = guards_list_prop.find(partner)
                         if partner.is_available(watch_list, day, hour,
-                                                days, delays_prop=[0, 3, 6]):
+                                                days, spot=spot,
+                                                delays_prop=[0, 3, 6]):
                             same_time_partners.append(partner)
 
             return chosen_guards
@@ -439,6 +449,9 @@ def get_watch_list_data(guards_list_prop: GuardsList, watch_list, days,
                         if g in same_time_partners:
                             same_time_partners.remove(g)
 
+                        if g in currently_missing_guards:
+                            currently_missing_guards.remove(g)
+
                     watch_list[day][hour][spot].extend(guards)
 
     return watch_list
@@ -457,17 +470,18 @@ def get_first_hour(watch_list, days):
 
 def get_days(watch_list, days_input=None):
     if not days_input:
-        days_input = input("How many days do you need to schedule? ") \
+        days_input = input("How many days do you need to schedule? ") if not days_input else days_input
 
-    while True:
-        if days_input.isdigit():
-            days_num = int(days_input)
-            break
-        else:
-            days_input = input("Please enter a valid integer. ")
+        while True:
+            if days_input.isdigit():
+                break
+            else:
+                days_input = input("Please enter a valid integer. ")
+        print()
 
+    days_num = int(days_input)
     days = list(
-        watch_list.keys()) if watch_list.keys() else [get_today_day_of_week()]
+        watch_list.keys()) if watch_list.keys() else [get_day_of_week(datetime.today())]
     days_cycle = cycle(WEEK_DAYS)
 
     day = next(days_cycle)
@@ -510,31 +524,32 @@ def init_watch_list(guards, print_missing_names):
     watch_list, duty_rooms, kitot_konenout_dict = \
         get_previous_data(PREVIOUS_FILE_NAME, watch_list, guards, GUARD_SPOTS,
                           print_missing_names=print_missing_names)
-    missing_guards = get_missing_guards(MISSING_GUARDS_FILE_NAME, guards)
+    missing_guards = get_missing_guards(MISSING_GUARDS_FILE_NAME, MISSING_GUARDS_SHEET_NAME, guards)
     rooms = get_rooms(ROOMS_LIST, guards)
 
     return watch_list, duty_rooms, kitot_konenout_dict, rooms, missing_guards
 
 
-def plan(user_input_prop, guards, print_missing_names, retry_after_infinite_loop_num=0):
-    watch_list, duty_rooms, kitot_konenout_dict, rooms, _ = init_watch_list(guards, print_missing_names)
-    days, user_i, first_hour = get_days(watch_list, days_input=user_input_prop)
-
+def plan(user_input_prop, print_missing_names, retry_after_infinite_loop_num=0):
+    user_i = user_input_prop
     try:
         if retry_after_infinite_loop_num >= RETRIES_NUM_BEFORE_CRASH:
             raise ImpossibleToFillPlanning("Watch list can't be filled with this context, "
                                            "try to recruit more guards, remove some guard spots "
                                            "or reduce the MINIMAL_DELAY between each guard in consts file")
 
+        guards = deepcopy(GUARDS_LIST)
+        watch_list, duty_rooms, kitot_konenout_dict, rooms, _ = init_watch_list(guards, print_missing_names)
+        days, user_i, first_hour = get_days(watch_list, days_input=user_input_prop)
         watch_list = get_watch_list_data(guards, watch_list, days, first_hour, duty_rooms, rooms, kitot_konenout_dict)
         delays_num = check_guards_slots_delays(watch_list, days, guards)
 
     except MaxIterationsReached:
         print("Maximum number of iterations reached, retrying...")
-        return plan(user_i, guards, print_missing_names,
+        return plan(user_i, print_missing_names,
                     retry_after_infinite_loop_num=retry_after_infinite_loop_num + 1)
 
-    return user_i, days, delays_num, watch_list, duty_rooms, kitot_konenout_dict
+    return user_i, days, delays_num, watch_list, duty_rooms, kitot_konenout_dict, guards
 
 
 if __name__ == '__main__':
@@ -547,23 +562,20 @@ if __name__ == '__main__':
     duty_room_per_day = dict()
     kitot_konenout = dict()
     while try_num < TRIES_NUMBER:
-        guards_list = deepcopy(GUARDS_LIST)
-        user_input, days_list, delays, wl, duty_room_per_day, kitot_konenout = \
-            plan(user_input, guards_list, try_num == 0)
+        user_input, days_list, delays, wl, duty_room_per_day, kitot_konenout, guards_list = \
+            plan(user_input, try_num == 0)
 
         if not min_delays or delays < min_delays:
             min_delays = delays
             best_wl = wl
 
         try_num += 1
-
-        print(f'Try {try_num}')
+        print(f'Try {try_num} finished')
 
         if user_input == '0':
             break
 
     export_to_excel(NEW_WATCH_LIST_FILE_NAME, best_wl, days_list, GUARD_SPOTS, duty_room_per_day, kitot_konenout)
-    check_guards_slots_delays(best_wl, days_list, guards_list,
-                              need_print=True)
+    check_guards_slots_delays(best_wl, days_list, guards_list, need_print=True)
 
     print('\nShivsakta!')

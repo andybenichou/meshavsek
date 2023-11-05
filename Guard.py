@@ -6,12 +6,14 @@ from helper import get_prec_day, find_guard_slot
 
 
 class Guard:
-    def __init__(self, name, partner=None, same_time_partners=None,
+    def __init__(self, first_name, last_name,
+                 partner=None, same_time_partners=None,
                  guards_slots=None, not_available_times=None,
                  is_guarding=True, is_living_far_away=False,
                  spots_preferences=None, time_preferences=None,
                  last_spot=None, room=None):
-        self.name = name
+        self.first_name = first_name
+        self.last_name = last_name
         self.partner = partner
         self.same_time_partners = same_time_partners if same_time_partners else list()
         self.__guards_slots = guards_slots if guards_slots else list()
@@ -25,20 +27,25 @@ class Guard:
         self.room = room
 
     def __repr__(self):
-        return f"Guard(name={self.name!r})"
+        return f"Guard(first_name={self.first_name!r}, last_name={self.last_name!r})"
 
     def __str__(self):
-        return self.name
+        return f"{self.first_name} {self.last_name}"
 
     def __eq__(self, other):
         if isinstance(other, Guard):
-            return self.name == other.name
+            return (self.first_name == other.first_name and self.last_name == other.last_name) \
+                or (self.first_name == other.last_name and self.last_name == other.first_name)
+
+        elif isinstance(other, str):
+            return self.first_name in other and self.last_name in other
+
         return False
 
     def __deepcopy__(self, memo=None):
         # Create a new instance with 'None' for deep attributes initially to avoid recursive deepcopy calls
-        new_guard = Guard(self.name, self.partner, self.same_time_partners,
-                          None, None,
+        new_guard = Guard(self.first_name, self.last_name, self.partner,
+                          self.same_time_partners, None, None,
                           self.is_guarding, self.is_living_far_away,
                           self.spots_preferences, self.time_preferences,
                           self.last_spot)
@@ -49,7 +56,7 @@ class Guard:
 
         # Now manually deepcopy the deep attributes without passing the memo dictionary
         new_guard.__guards_slots = deepcopy(self.__guards_slots, memo)
-        new_guard.__not_available_times = deepcopy(self.__not_available_times, memo)
+        new_guard.not_available_times = deepcopy(self.__not_available_times, memo)
 
         return new_guard
 
@@ -67,6 +74,41 @@ class Guard:
             'start': start,
             'end': end
         }
+
+        for not_available_time in self.__not_available_times:
+            delete_not_available_time = False
+            # Starts before the beginning
+            if (time_obj['start']['day'] == not_available_time['start']['day'] and
+                    time_obj['start']['hour'] <= not_available_time['start']['hour']) \
+                    or time_obj['start']['day'] < not_available_time['start']['day']:
+                # Finishes after the beginning
+                if (time_obj['end']['day'] == not_available_time['start']['day'] and
+                        time_obj['end']['hour'] >= not_available_time['start']['hour']) \
+                        or time_obj['end']['day'] > not_available_time['start']['day']:
+                    # But before the end
+                    if (time_obj['end']['day'] == not_available_time['end']['day'] and
+                            time_obj['end']['hour'] <= not_available_time['end']['hour']) \
+                            or time_obj['end']['day'] < not_available_time['end']['day']:
+                        time_obj['end'] = not_available_time['end']
+                        delete_not_available_time = True
+
+            # Starts after the beginning
+            if (time_obj['start']['day'] == not_available_time['start']['day'] and
+                time_obj['start']['hour'] >= not_available_time['start']['hour']) \
+                    or time_obj['start']['day'] > not_available_time['start']['day']:
+                # But before the end
+                if (time_obj['start']['day'] == not_available_time['end']['day'] and
+                    time_obj['start']['hour'] <= not_available_time['end']['hour']) \
+                        or time_obj['start']['day'] < not_available_time['end']['day']:
+                    # Finishes after the end
+                    if (time_obj['end']['day'] == not_available_time['end']['day'] and
+                        time_obj['end']['hour'] >= not_available_time['end']['hour']) \
+                            or time_obj['end']['day'] > not_available_time['end']['day']:
+                        time_obj['start'] = not_available_time['start']
+                        delete_not_available_time = True
+
+            if delete_not_available_time:
+                self.__not_available_times.remove(not_available_time)
 
         if time_obj not in self.__not_available_times:
             self.__not_available_times.append(time_obj)
@@ -87,20 +129,54 @@ class Guard:
 
     # Helper function to check if a guard is available
     def is_available(self, watch_list, day, hour, days, spot=None, delays_prop=None):
+        def is_missing_during_spot():
+            def day_is_before(first, second):
+                return completed_days.index(first) < completed_days.index(second)
+
+            completed_days = days + [d for d in WEEK_DAYS if d not in days]
+
+            if spot:
+                guard_slot = find_guard_slot(day, hour, spot, WEEK_DAYS + WEEK_DAYS)
+                if guard_slot:
+                    for missing_times in self.__not_available_times:
+                        # Leaves before the beginning
+                        if (missing_times['start']['day'] == guard_slot['start']['day'] and
+                            missing_times['start']['hour'] <= guard_slot['start']['hour']) \
+                                or day_is_before(missing_times['start']['day'], guard_slot['start']['day']):
+                            # Comes back after the beginning
+                            if (missing_times['end']['day'] == guard_slot['start']['day'] and
+                                missing_times['end']['hour'] >= guard_slot['start']['hour']) \
+                                    or day_is_before(guard_slot['start']['day'], missing_times['end']['day']):
+                                return True
+
+                        # Leaves after the beginning
+                        if (missing_times['start']['day'] == guard_slot['start']['day'] and
+                            missing_times['start']['hour'] >= guard_slot['start']['hour']) \
+                                or day_is_before(guard_slot['start']['day'], missing_times['start']['day']):
+                            # But before the end
+                            if (missing_times['start']['day'] == guard_slot['end']['day'] and
+                                missing_times['start']['hour'] <= guard_slot['end']['hour']) \
+                                    or day_is_before(missing_times['start']['day'], guard_slot['end']['day']):
+                                return True
+            return False
+
         if not self.is_guarding:
             return False
 
-        elif spot and self.spots_preferences \
+        if spot and self.spots_preferences \
                 and spot not in self.spots_preferences:
             return False
 
-        elif self.is_missing(day, hour):
+        if self.is_missing(day, hour):
             return False
 
-        elif spot and self.last_spot == spot:
+        if is_missing_during_spot():
             return False
 
-        elif self.time_preferences:
+        if spot and self.last_spot == spot:
+            return False
+
+        if self.time_preferences:
             in_time_preferences = False
             for time_pref in self.time_preferences:
                 if time_pref['start'] <= hour < time_pref['end']:
@@ -121,7 +197,7 @@ class Guard:
                 break
 
             # Check if the guard already in another spot
-            for spot_name, guard_spot in GUARD_SPOTS.items():
+            for spot_name in GUARD_SPOTS:
                 slot = find_guard_slot(updated_day, updated_hour, spot_name, days)
                 if slot and self in watch_list[slot['start']['day']][slot['start']['hour']][spot_name]:
                     return False

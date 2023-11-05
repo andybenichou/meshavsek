@@ -63,7 +63,7 @@ def get_kitat_konenout(row, last_kitat_konenout):
 
     if pd.notna(kitat_konenout):
         # Search for the pattern: the word "חדר" followed by a space and one or more digits
-        match = re.search(r"חדר (\d+)", kitat_konenout)
+        match = re.search(r"(\d+)", kitat_konenout)
 
         # Extract the number if a match is found
         room_number = int(match.group(1)) if match else None
@@ -74,9 +74,9 @@ def get_kitat_konenout(row, last_kitat_konenout):
 
 def get_duty_room(row):
     for value in row:
-        if pd.notna(value) and 'תורני רס"פ' in value:
+        if pd.notna(value) and isinstance(value, str) and 'תורני רס"פ' in value:
             # Search for the pattern: the word "חדר" followed by a space and one or more digits
-            match = re.search(r"חדר (\d+)", value)
+            match = re.search(r"(\d+)", value)
 
             # Extract the number if a match is found
             room_number = int(match.group(1)) if match else None

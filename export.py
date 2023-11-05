@@ -24,6 +24,15 @@ def export_to_CSV(watch_list, days, guard_spots):
                 csvwriter.writerow(row)
 
 
+def is_row_entry(row):
+    is_row_empty = True
+    for guards_str in row[2:]:
+        if len(guards_str) > 1:
+            is_row_empty = False
+
+    return is_row_empty
+
+
 def get_excel_data_frame(watch_list, days, guard_spots, duty_room_per_day, kitot_konenout):
     columns = ['יום', 'שעה'] + list(guard_spots.keys()) + ['כתת כוננות']
     data = list()
@@ -39,28 +48,24 @@ def get_excel_data_frame(watch_list, days, guard_spots, duty_room_per_day, kitot
 
             for spot in guard_spots.keys():
                 guards_str = '\n'.join(
-                    [g.name for g in watch_list[day][hour][spot]]) \
+                    [str(g) for g in watch_list[day][hour][spot]]) \
                     if watch_list[day][hour][spot] else ''
 
                 if spot == 'פטרול' and not guards_str \
-                        and day in duty_room_per_day:
+                        and day in duty_room_per_day \
+                        and not is_row_entry(row):
                     row.append(f'{duty_room_per_day[day]} תורני רס"פ - חדר')
 
                 elif guards_str:
                     row.append(guards_str)
 
-            is_row_empty = True
-            for guards_str in row[2:]:
-                if len(guards_str) > 1:
-                    is_row_empty = False
-
-            if not is_row_empty \
+            if not is_row_entry(row) \
                     and day in kitot_konenout \
                     and hour in kitot_konenout[day] \
                     and kitot_konenout[day][hour]:
                 row.append(f'{kitot_konenout[day][hour]} חדר')
 
-            if not is_row_empty:
+            if not is_row_entry(row):
                 data.append(row)
 
     return pd.DataFrame(data, columns=columns)
