@@ -78,7 +78,8 @@ def get_guards_slots(watch_list, days, guards):
     return guard_slots
 
 
-def check_guards_slots_delays(watch_list, days, guards, need_print=False):
+def check_guards_slots_delays(watch_list, days, guards, first_hour,
+                              need_print=False):
     guard_slots = get_guards_slots(watch_list, days, guards)
     bad_delays = list()
     too_good_delays = list()
@@ -88,7 +89,7 @@ def check_guards_slots_delays(watch_list, days, guards, need_print=False):
         for slot in guard_slots[guard]:
             start_day, start_hour = slot['start']['day'], slot['start']['hour']
 
-            if last_slot:
+            if last_slot and last_slot['end']['hour'] >= first_hour:
                 days_cycle = cycle(days)
                 curr_day = next(days_cycle)
                 while curr_day != last_slot['end']['day']:
@@ -121,40 +122,54 @@ def check_guards_slots_delays(watch_list, days, guards, need_print=False):
     return len(bad_delays)
 
 
-# Align guards cycle to the next available guard
-def align_guards_cycle(watch_list, guard_cycle_prop,
-                       guards_list_prop: GuardsList,
-                       day, hour, days, currently_missing_guards):
-    guard = guards_list_prop.get_current_guard()
+def get_num_guards_available(watch_list, guards_list_prop, day, hour, days, spot):
+    available_num = 0
+    for g in guards_list_prop:
+        if g.is_available(watch_list, day, hour, days, spot=spot):
+            available_num += 1
 
-    if not guard:
-        guard = next(guard_cycle_prop)
-        guards_list_prop.set_current_guard(guard)
-
-    first_guard = guard
-    while not guard.is_available(watch_list, day, hour, days):
-        if guard.is_missing(day, hour):
-            currently_missing_guards.append(guard)
-
-        guard = next(guard_cycle_prop)
-        guards_list_prop.set_current_guard(guard)
-
-        if guard == first_guard:
-            raise MaxIterationsReached
-
-    return guard
+    return available_num
 
 
-def get_random_guards(watch_list, buff_cycle, same_time_partners,
-                      currently_missing_guards, day, hour, spot, days, guards):
+def get_num_no_partner_guards_available(watch_list,
+                                        guards_list_prop, day, hour,
+                                        days, spot):
+    no_partner_available_num = 0
+    for g in guards_list_prop:
+        if g.is_available(watch_list, day, hour, days, spot=spot) \
+                and (not g.partner
+                     or not g.is_partner_available(guards_list_prop,
+                                                   watch_list, day, hour, days,
+                                                   spot)):
+            no_partner_available_num += 1
+
+    return no_partner_available_num
+
+
+def get_random_guards(watch_list, guards_list_prop, buff_cycle,
+                      same_time_partners, currently_missing_guards,
+                      day, hour, spot, days, guards, no_duo):
+    available_guards_num = get_num_guards_available(watch_list,
+                                                    guards_list_prop, day,
+                                                    hour, days, spot)
+    if available_guards_num - len(guards) <= 0:
+        raise MaxIterationsReached
+
+    no_partner_guards_num = get_num_no_partner_guards_available(watch_list,
+                                                                guards_list_prop,
+                                                                day, hour,
+                                                                days, spot)
+
+    if no_duo and no_partner_guards_num - len(guards) <= 0:
+        raise MaxIterationsReached
+
     random_guards = list()
-    MAX_ITERATIONS = len(GUARDS_LIST) * len(days) * 10  # Set a maximum limit for the number of iterations
-    iteration_count = 0
     while len(random_guards) != RANDOMNESS_LEVEL:
-        if iteration_count > MAX_ITERATIONS:
-            raise MaxIterationsReached
+        if len(random_guards) + len(guards) == available_guards_num:
+            break
 
-        iteration_count += 1
+        if no_duo and len(random_guards) + len(guards) == no_partner_guards_num:
+            break
 
         guard = None
         for g in same_time_partners:
@@ -178,46 +193,79 @@ def get_random_guards(watch_list, buff_cycle, same_time_partners,
 
         if guard.is_available(watch_list, day, hour, days, spot=spot) \
                 and guard not in guards:
+            if no_duo and guard.partner and \
+                guard.is_partner_available(guards_list_prop, watch_list,
+                                           day, hour, days, spot) and \
+                    no_partner_guards_num + len(guards) > 0:
+                continue
             random_guards.append(guard)
 
     random.shuffle(random_guards)
     return random_guards
 
 
+# Align guards cycle to the next available guard
+def get_curr_guard_available(watch_list, guards_list_prop: GuardsList,
+                             day, hour, days, currently_missing_guards):
+    guards_cycle = cycle(guards_list_prop)
+    guard = next(guards_cycle)
+
+    if guards_list_prop.get_current_guard():
+        while guard != guards_list_prop.get_current_guard():
+            guard = next(guards_cycle)
+    else:
+        guards_list_prop.set_current_guard(guard)
+
+    first_guard = guard
+    while not guard.is_available(watch_list, day, hour, days):
+        if guard.is_missing(day, hour):
+            currently_missing_guards.append(guard)
+
+        guard = next(guards_cycle)
+        guards_list_prop.set_current_guard(guard)
+
+        if guard == first_guard:
+            raise MaxIterationsReached
+
+    return guard
+
+
 # Helper function to get the next available guard
 def get_next_available_guard(guards_list_prop: GuardsList,
-                             watch_list, guard_cycle_prop, day, hour,
-                             days, currently_missing_guards,
-                             same_time_partners, spot,
+                             watch_list, day, hour, days,
+                             currently_missing_guards, same_time_partners,
+                             spot, break_partners: bool,
                              guards: GuardsList = None, no_duo=False):
-    curr_guard = align_guards_cycle(watch_list, guard_cycle_prop,
-                                    guards_list_prop,
-                                    day, hour, days, currently_missing_guards)
+    no_partner_available_guards = get_num_no_partner_guards_available(watch_list,
+                                                                      guards_list_prop,
+                                                                      day, hour, days,
+                                                                      spot)
+    break_partners = break_partners and (no_partner_available_guards - len(guards) > 0)
 
+    curr_guard = get_curr_guard_available(watch_list, guards_list_prop, day,
+                                          hour, days, currently_missing_guards)
     index = guards_list_prop.index(curr_guard)
     buff_cycle = cycle(guards_list_prop[index:] + guards_list_prop[:index])
 
-    MAX_ITERATIONS = len(guards_list_prop) * len(days) * 10  # Set a maximum limit for the number of iterations
-    iteration_count = 0
+    if get_num_guards_available(watch_list, guards_list_prop, day,
+                                hour, days, spot) == 0:
+        raise MaxIterationsReached
+
     chosen_guards = None
     while True:
-        if iteration_count > MAX_ITERATIONS:
-            raise MaxIterationsReached
-
-        iteration_count += 1
-
-        random_guards = get_random_guards(watch_list, buff_cycle,
-                                          same_time_partners,
+        random_guards = get_random_guards(watch_list, guards_list_prop,
+                                          buff_cycle, same_time_partners,
                                           currently_missing_guards,
                                           day, hour, spot, days,
-                                          guards)
+                                          guards,
+                                          no_duo=no_duo and not break_partners)
 
         for guard in random_guards:
             partner = guards_list_prop.find(guard.partner)
             if partner:
-                if not partner.is_available(watch_list, day, hour,
-                                            days, spot=spot,
-                                            delays_prop=[0, 3, 6]):
+                if not guard.is_partner_available(guards_list_prop,
+                                                  watch_list, day, hour,
+                                                  days, spot):
                     chosen_guards = (guard, None)
                     break
 
@@ -225,8 +273,12 @@ def get_next_available_guard(guards_list_prop: GuardsList,
                         and spot not in partner.spots_preferences:
                     continue
 
-                elif no_duo:
+                elif no_duo and not break_partners:
                     continue
+
+                elif no_duo and break_partners:
+                    chosen_guards = (guard, None)
+                    break
 
                 else:
                     chosen_guards = (guard, partner)
@@ -248,7 +300,6 @@ def get_next_available_guard(guards_list_prop: GuardsList,
                                                 days, spot=spot,
                                                 delays_prop=[0, 3, 6]):
                             same_time_partners.append(partner)
-
             return chosen_guards
 
 
@@ -273,9 +324,9 @@ def get_already_filled_guard_slot(watch_list, day, hour, spot, days):
     return guards, fill_guard_spot
 
 
-def get_guards(guards_list_prop: GuardsList, watch_list, guard_cycle, day,
-               hour, spot, days, currently_missing_guards,
-               same_time_partners):
+def get_guards(guards_list_prop: GuardsList, watch_list, day, hour, spot, days,
+               currently_missing_guards, same_time_partners,
+               break_partners: bool):
     guards, fill_guard_spot = \
         get_already_filled_guard_slot(watch_list, day, hour, spot, days)
 
@@ -287,13 +338,13 @@ def get_guards(guards_list_prop: GuardsList, watch_list, guard_cycle, day,
     if fill_guard_spot:
         guard1, guard2 = get_next_available_guard(guards_list_prop,
                                                   watch_list,
-                                                  guard_cycle,
                                                   day,
                                                   hour,
                                                   days,
                                                   currently_missing_guards,
                                                   same_time_partners,
                                                   spot,
+                                                  break_partners,
                                                   guards=guards)
 
         for g in [guard1, guard2]:
@@ -303,15 +354,15 @@ def get_guards(guards_list_prop: GuardsList, watch_list, guard_cycle, day,
         if len(guards) == 1 and GUARD_SPOTS[spot]['guards_number'] == 2:
             guard2 = get_next_available_guard(guards_list_prop,
                                               watch_list,
-                                              guard_cycle,
                                               day,
                                               hour,
                                               days,
                                               currently_missing_guards,
                                               same_time_partners,
                                               spot,
+                                              break_partners,
                                               guards=guards,
-                                              no_duo=True)[0]
+                                              no_duo=True,)[0]
             guards.append(guard2)
         guards.sort()
 
@@ -402,12 +453,11 @@ def complete_duty_room(duty_rooms, day, rooms):
 
 def get_watch_list_data(guards_list_prop: GuardsList, watch_list, days,
                         first_hour_prop, duty_rooms, rooms: [Room],
-                        kitot_konenout_dict):
+                        kitot_konenout_dict, break_partners: bool):
     currently_missing_guards = GuardsList()
     same_time_partners = GuardsList()
 
     # Assign guards to each slot
-    guard_cycle = cycle(guards_list_prop)
     kitat_konenout = None
     kitat_konenout_duration = 0
     for day in days:
@@ -437,10 +487,9 @@ def get_watch_list_data(guards_list_prop: GuardsList, watch_list, days,
             spots = list(GUARD_SPOTS.keys())
             random.shuffle(spots)
             for spot in spots:
-                guards = get_guards(guards_list_prop, watch_list, guard_cycle,
-                                    day, hour, spot, days,
-                                    currently_missing_guards,
-                                    same_time_partners)
+                guards = get_guards(guards_list_prop, watch_list, day, hour,
+                                    spot, days, currently_missing_guards,
+                                    same_time_partners, break_partners)
 
                 if len(guards) == GUARD_SPOTS[spot]['guards_number'] \
                         and not watch_list[day][hour][spot]:
@@ -530,26 +579,32 @@ def init_watch_list(guards, print_missing_names):
     return watch_list, duty_rooms, kitot_konenout_dict, rooms, missing_guards
 
 
-def plan(user_input_prop, print_missing_names, retry_after_infinite_loop_num=0):
+def plan(user_input_prop, print_missing_names, retry_after_infinite_loop_num=0,
+         break_partners=False):
     user_i = user_input_prop
     try:
         if retry_after_infinite_loop_num >= RETRIES_NUM_BEFORE_CRASH:
-            raise ImpossibleToFillPlanning("Watch list can't be filled with this context, "
-                                           "try to recruit more guards, remove some guard spots "
-                                           "or reduce the MINIMAL_DELAY between each guard in consts file")
+            if break_partners:
+                print('IMPOSSIBLE')
+                raise ImpossibleToFillPlanning
+            else:
+                print('BREAK PARTNERS')
+                return plan(user_i, print_missing_names,
+                            retry_after_infinite_loop_num=0,
+                            break_partners=True)
 
         guards = deepcopy(GUARDS_LIST)
         watch_list, duty_rooms, kitot_konenout_dict, rooms, _ = init_watch_list(guards, print_missing_names)
         days, user_i, first_hour = get_days(watch_list, days_input=user_input_prop)
-        watch_list = get_watch_list_data(guards, watch_list, days, first_hour, duty_rooms, rooms, kitot_konenout_dict)
-        delays_num = check_guards_slots_delays(watch_list, days, guards)
+        watch_list = get_watch_list_data(guards, watch_list, days, first_hour, duty_rooms, rooms, kitot_konenout_dict, break_partners)
+        delays_num = check_guards_slots_delays(watch_list, days, guards, first_hour)
 
     except MaxIterationsReached:
         print("Maximum number of iterations reached, retrying...")
         return plan(user_i, print_missing_names,
                     retry_after_infinite_loop_num=retry_after_infinite_loop_num + 1)
 
-    return user_i, days, delays_num, watch_list, duty_rooms, kitot_konenout_dict, guards
+    return user_i, days, delays_num, watch_list, duty_rooms, kitot_konenout_dict, guards, first_hour
 
 
 if __name__ == '__main__':
@@ -561,21 +616,31 @@ if __name__ == '__main__':
     guards_list = None
     duty_room_per_day = dict()
     kitot_konenout = dict()
-    while try_num < TRIES_NUMBER:
-        user_input, days_list, delays, wl, duty_room_per_day, kitot_konenout, guards_list = \
-            plan(user_input, try_num == 0)
+    first_hour = None
+    try:
+        while try_num < TRIES_NUMBER:
+            user_input, days_list, delays, wl, duty_room_per_day, \
+                kitot_konenout, guards_list, first_hour = plan(user_input, try_num == 0)
 
-        if not min_delays or delays < min_delays:
-            min_delays = delays
-            best_wl = wl
+            if not min_delays or delays < min_delays:
+                min_delays = delays
+                best_wl = wl
 
-        try_num += 1
-        print(f'Try {try_num} finished')
+            try_num += 1
+            print(f'Try {try_num} finished')
 
-        if user_input == '0':
-            break
+            if user_input == '0':
+                break
 
-    export_to_excel(NEW_WATCH_LIST_FILE_NAME, best_wl, days_list, GUARD_SPOTS, duty_room_per_day, kitot_konenout)
-    check_guards_slots_delays(best_wl, days_list, guards_list, need_print=True)
+    except ImpossibleToFillPlanning:
+        if not best_wl:
+            raise ImpossibleToFillPlanning("Watch list can't be filled with this context, "
+                                           "try to recruit more guards, remove some guard spots "
+                                           "or reduce the MINIMAL_DELAY between each guard in consts file")
+
+    export_to_excel(NEW_WATCH_LIST_FILE_NAME, best_wl, days_list, GUARD_SPOTS,
+                    duty_room_per_day, kitot_konenout)
+    check_guards_slots_delays(best_wl, days_list, guards_list, first_hour,
+                              need_print=True)
 
     print('\nShivsakta!')
