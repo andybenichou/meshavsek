@@ -39,6 +39,7 @@ def find_guard_slot(date: datetime, spot):
     slot_start_date = deepcopy(date)
     slot_end_date = deepcopy(date)
     hour = date.hour
+
     while duration < guard_spot['duration']:
         slot_start_hour, slot_end_hour = t, (t + guard_spot['guard_duration']) % 24
         t = (t + guard_spot['guard_duration']) % 24
@@ -46,15 +47,17 @@ def find_guard_slot(date: datetime, spot):
 
         if slot_end_hour < slot_start_hour:
             slot_end_hour += 24
-            if hour < 12:
-                slot_start_date -= timedelta(days=1)
-            else:
-                slot_end_date = slot_start_date + timedelta(days=1)
 
         if slot_start_hour <= hour + 24 < slot_end_hour:
             hour += 24
 
         if slot_start_hour <= hour < slot_end_hour:
+            if slot_end_hour % 24 < slot_start_hour:
+                if hour % 24 < 12:
+                    slot_start_date -= timedelta(days=1)
+                else:
+                    slot_end_date = slot_start_date + timedelta(days=1)
+
             return {
                 'start': slot_start_date.replace(hour=slot_start_hour),
                 'end': slot_end_date.replace(hour=slot_end_hour % 24),
