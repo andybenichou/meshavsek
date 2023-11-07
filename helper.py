@@ -53,7 +53,7 @@ def find_guard_slot(date: datetime, spot):
 
         if slot_start_hour <= hour < slot_end_hour:
             if slot_end_hour % 24 < slot_start_hour:
-                if hour % 24 < 12:
+                if hour % 24 < slot_start_hour:
                     slot_start_date -= timedelta(days=1)
                 else:
                     slot_end_date = slot_start_date + timedelta(days=1)
