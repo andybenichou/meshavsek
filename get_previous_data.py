@@ -8,11 +8,11 @@ from GuardsList import GuardsList
 from helper import find_guard_slot
 
 
-def find_guards(watch_list, guards_list: GuardsList, days, day, hour, spot,
-                row, print_missing_names=True):
+def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
+                print_missing_names=True):
     missing_names = list()
 
-    slot = find_guard_slot(day, hour, spot, days)
+    slot = find_guard_slot(date, spot)
 
     if not slot:
         return GuardsList()
@@ -40,7 +40,7 @@ def find_guards(watch_list, guards_list: GuardsList, days, day, hour, spot,
 
     # Find in already filled hours of the slot
     if slot:
-        guards_slot = watch_list[slot['start']['day']][slot['start']['hour']][spot]
+        guards_slot = watch_list[slot['start']][spot]
 
         if guards_slot:
             return guards_slot
@@ -86,19 +86,24 @@ def get_duty_room(row):
     return None
 
 
-def get_days(df):
-    days = list()
-    last_day = None
+def parse_date(row):
+    if pd.notna(row['יום']):
+        return row['יום'].to_pydatetime()
+    return None
+
+
+def get_dates(df):
+    dates = list()
+    last_date = None
     for index, row in df.iterrows():
-        day = row['יום']
+        date = parse_date(row)
+        if date:
+            last_date = date
 
-        if pd.notna(row['יום']):
-            last_day = day
+        if last_date not in dates and pd.notna(row['ש.ג.']):
+            dates.append(last_date)
 
-        if last_day not in days and pd.notna(row['ש.ג.']):
-            days.append(last_day)
-
-    return days
+    return dates
 
 
 def get_previous_data(file_name, watch_list, guards_list: GuardsList,
@@ -108,57 +113,46 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
     src_previous_dir = os.path.dirname(os.path.abspath(__file__))
     previous_dir = os.path.join(src_previous_dir, file_path)
 
-    duty_room_per_day = defaultdict(int)
-    kitot_konenout = defaultdict(lambda: defaultdict(int))
+    duty_room_per_date = defaultdict(int)
+    kitot_konenout = defaultdict(int)
 
     if not os.path.exists(previous_dir):
-        return watch_list, duty_room_per_day, kitot_konenout
+        return watch_list, duty_room_per_date, kitot_konenout
 
     xl = pd.ExcelFile(file_path)
 
     # Extract data from the first sheet (adjust as needed)
     df = xl.parse(xl.sheet_names[0])
 
-    days = get_days(df)
-    for d in days:
-        watch_list[d] = defaultdict(lambda: defaultdict(list))
-        kitot_konenout[d] = defaultdict(int)
-
     # Iterate through the rows
-    day = None
+    date = None
     kitat_konenout = None
     for index, row in df.iterrows():
-        if (day is None or day != row['יום']) and pd.notna(row['יום']):
-            day = row['יום']
+        buff_date = parse_date(row)
+        if date is None or buff_date != date and buff_date:
+            date = buff_date
 
-        if day not in days:
-            break
+            if date not in duty_room_per_date:
+                duty_room = get_duty_room(row)
 
-        if day not in duty_room_per_day:
-            duty_room = get_duty_room(row)
-
-            if duty_room is not None:
-                duty_room_per_day[day] = duty_room
+                if duty_room is not None:
+                    duty_room_per_date[date] = duty_room
 
         if isinstance(row['שעה'], str):
             hour = int(row['שעה'][:2])
         else:
             hour = int(row['שעה'].strftime('%H'))
 
+        date = date.replace(hour=hour)
+
         kitat_konenout = get_kitat_konenout(row, kitat_konenout)
-        kitot_konenout[day][hour] = kitat_konenout if kitat_konenout is not None else ''
-
-        if day not in duty_room_per_day:
-            duty_room = get_duty_room(row)
-
-            if duty_room is not None:
-                duty_room_per_day[day] = duty_room
+        kitot_konenout[date] = kitat_konenout if kitat_konenout is not None else ''
 
         for p in guard_spots.keys():
-            guards = find_guards(watch_list, guards_list, days, day,
-                                 hour, p, row, print_missing_names)
-            watch_list[day][hour][p] = guards
+            guards = find_guards(watch_list, guards_list, date, p, row,
+                                 print_missing_names)
+            watch_list[date][p] = guards
 
-        watch_list[day][hour]['כתת כוננות'] = kitat_konenout
+        watch_list[date]['כתת כוננות'] = kitat_konenout
 
-    return watch_list, duty_room_per_day, kitot_konenout
+    return watch_list, duty_room_per_date, kitot_konenout

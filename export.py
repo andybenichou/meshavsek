@@ -1,27 +1,25 @@
 import csv
+from datetime import datetime
 
 import pandas as pd
 from openpyxl import load_workbook
-from openpyxl.styles import Alignment
+from openpyxl.styles import Font, Border, Side, Alignment
+from openpyxl.utils.exceptions import IllegalCharacterError
 
-from consts import FIRST_HOUR_FIRST_DAY, LAST_HOUR_LAST_DAY
 
-
-def export_to_CSV(watch_list, days, guard_spots):
+def export_to_CSV(watch_list, guard_spots):
     with open('watch_list.csv', 'w', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
         header = ['יום', 'שעה'] + list(guard_spots.keys())
         csvwriter.writerow(header)
-        for day in days:
-            for hour in range(24):
-                time = f'{hour:02d}00'
-                row = [day, time]
+        for date in watch_list:
+            row = [date]
 
-                for spot in guard_spots.keys():
-                    guards_str = '\n'.join(watch_list[day][hour][spot]) \
-                        if watch_list[day][hour][spot] else ' '
-                    row.append(guards_str)
-                csvwriter.writerow(row)
+            for spot in guard_spots.keys():
+                guards_str = '\n'.join(watch_list[date][spot]) \
+                    if watch_list[date][spot] else ' '
+                row.append(guards_str)
+            csvwriter.writerow(row)
 
 
 def is_row_entry(row):
@@ -33,40 +31,39 @@ def is_row_entry(row):
     return is_row_empty
 
 
-def get_excel_data_frame(watch_list, days, guard_spots, duty_room_per_day, kitot_konenout):
+def parse_date(date: datetime):
+    return date.date()
+
+
+def get_excel_data_frame(watch_list, guard_spots, duty_room_per_day, kitot_konenout):
     columns = ['יום', 'שעה'] + list(guard_spots.keys()) + ['כתת כוננות']
     data = list()
 
-    for day in days:
-        for hour in range(24):
-            if (days.index(day) == 0 and hour < FIRST_HOUR_FIRST_DAY) or \
-                    (days.index(day) == len(days) - 1 and hour >= LAST_HOUR_LAST_DAY):
-                continue
+    for date in watch_list:
+        time_for_excel = f'{date.hour:02d}:00'  # formatted for Excel
+        row = [parse_date(date), time_for_excel]
 
-            time_for_excel = f'{hour:02d}:00'  # formatted for Excel
-            row = [day, time_for_excel]
+        for spot in guard_spots.keys():
+            guards_str = '\n'.join(
+                [str(g) for g in watch_list[date][spot]]) \
+                if watch_list[date][spot] else ''
 
-            for spot in guard_spots.keys():
-                guards_str = '\n'.join(
-                    [str(g) for g in watch_list[day][hour][spot]]) \
-                    if watch_list[day][hour][spot] else ''
+            midgnight_date = date.replace(hour=0)
+            if spot == 'פטרול' and not guards_str \
+                    and midgnight_date in duty_room_per_day \
+                    and not is_row_entry(row):
+                row.append(f'{duty_room_per_day[midgnight_date]} תורני רס"פ - חדר')
 
-                if spot == 'פטרול' and not guards_str \
-                        and day in duty_room_per_day \
-                        and not is_row_entry(row):
-                    row.append(f'{duty_room_per_day[day]} תורני רס"פ - חדר')
+            elif guards_str:
+                row.append(guards_str)
 
-                elif guards_str:
-                    row.append(guards_str)
+        if not is_row_entry(row) \
+                and date in kitot_konenout  \
+                and kitot_konenout[date] is not None:
+            row.append(f'{kitot_konenout[date]} חדר')
 
-            if not is_row_entry(row) \
-                    and day in kitot_konenout \
-                    and hour in kitot_konenout[day] \
-                    and kitot_konenout[day][hour]:
-                row.append(f'{kitot_konenout[day][hour]} חדר')
-
-            if not is_row_entry(row):
-                data.append(row)
+        if not is_row_entry(row):
+            data.append(row)
 
     return pd.DataFrame(data, columns=columns)
 
@@ -95,25 +92,49 @@ def merge_excel_cells(df, worksheet):
                     start_content = content
 
 
+def is_column_empty(worksheet, column_index):
+    # Iterate through each cell in the column
+    for row in worksheet.iter_rows(min_col=column_index, max_col=column_index):
+        cell = row[0]  # Since we're looking at one column, there's only one cell per row tuple
+        if cell.value is not None:
+            return False  # Found a cell with data, so the column is not empty
+    return True  # All cells in the column are empty
+
+
 def adjust_columns_and_rows(worksheet):
-    # Adjust the column width according to content, wrap text, and center align
-    # text
-    for col in worksheet.columns:
+    # Define font, alignment, and border styles
+    bold_font = Font(bold=True, size=12)
+    center_aligned_text = Alignment(horizontal='center', vertical='center',
+                                    text_rotation=0, readingOrder=1)
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    for index, col in enumerate(worksheet.columns, start=1):
+        if is_column_empty(worksheet, index):
+            continue
+
         max_length = 0
         column = [cell for cell in col]
         for cell in column:
             try:
                 if len(str(cell.value)) > max_length:
                     max_length = len(str(cell.value))
-
-                # Set wrap text and center alignment
-                cell.alignment = Alignment(wrap_text=True, horizontal='center',
-                                           vertical='center')
-            except:
+                # Apply styles
+                cell.font = bold_font
+                cell.alignment = center_aligned_text
+                cell.border = thin_border  # Apply border to each cell
+            except IllegalCharacterError:
+                # Handle specific openpyxl IllegalCharacterError
                 pass
+            except Exception as e:
+                # You can log the exception if needed
+                print(f"An error occurred: {e}")
         adjusted_width = (max_length + 2)
-        worksheet.column_dimensions[
-            column[0].column_letter].width = adjusted_width
+        worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
 
 
 def format_excel(df, worksheet):
@@ -121,8 +142,8 @@ def format_excel(df, worksheet):
     adjust_columns_and_rows(worksheet)
 
 
-def export_to_excel(file_name, watch_list, days, guard_spots, duty_room_per_day, kitot_konenout):
-    df = get_excel_data_frame(watch_list, days, guard_spots, duty_room_per_day, kitot_konenout)
+def export_to_excel(file_name, watch_list, guard_spots, duty_room_per_day, kitot_konenout):
+    df = get_excel_data_frame(watch_list, guard_spots, duty_room_per_day, kitot_konenout)
 
     # Save to Excel
     excel_path = f'{file_name}.xlsx'

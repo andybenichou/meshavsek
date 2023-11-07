@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import reduce
 
 from GuardsList import GuardsList
@@ -44,10 +45,9 @@ class Room:
     def __len__(self):
         return len(self.__guards)
 
-    def get_available_guards_number(self, watch_list, day, hour, days):
+    def get_available_guards_number(self, watch_list, date: datetime):
         return reduce(lambda acc,
-                      guard: acc + (1 if guard.is_available(watch_list, day,
-                                                            hour, days,
+                      guard: acc + (1 if guard.is_available(watch_list, date,
                                                             delays_prop=[0])
                                     else 0),
                       self.__guards, 0)

@@ -5,28 +5,29 @@ import pandas as pd
 
 from GuardsList import GuardsList
 from guards_properties import MISSING_GUARDS
-from helper import get_next_dates, get_next_week_day, get_day_of_week
+from helper import get_next_dates, get_day_of_week, get_day_at_midnight
 
 
 def complete_each_guard_missing_slots(missing_guards):
     for date, missing in missing_guards.items():
         weekday = get_day_of_week(date)
         for guard in missing:
-            exit_hour = 12 if not guard.is_living_far_away else 8
+            exit_hour = 12 if not guard.is_living_far_away else 10
             return_hour = 12 if not guard.is_living_far_away else 16
 
             if weekday == 'שישי':
                 return_hour = 21 if not guard.is_living_far_away else 23
 
             time_obj = {
-                'start': {'day': weekday, 'hour': exit_hour},
-                'end': {'day': get_next_week_day(weekday), 'hour': return_hour}
+                'start': date.replace(hour=exit_hour),
+                'end': (date + timedelta(days=1)).replace(hour=return_hour)
             }
 
             guard.add_not_available_time(time_obj['start'], time_obj['end'])
 
 
-def get_missing_guards(file_name, sheet_name, guards: GuardsList):
+def get_missing_guards(file_name, sheet_name, guards: GuardsList,
+                       days_input: int):
     file_path = f'{file_name}.xlsx'
     src_missing_dir = os.path.dirname(os.path.abspath(__file__))
     missing_dir = os.path.join(src_missing_dir, file_path)
@@ -39,10 +40,11 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList):
     xl = pd.ExcelFile(file_path)
     df = xl.parse(sheet_name, header=[0, 2])
 
-    next_dates = get_next_dates(7, datetime.now() - timedelta(days=1))
+    next_dates = get_next_dates(days_input + 1,
+                                get_day_at_midnight(datetime.now()) - timedelta(days=1))
+
     not_known_guards = list()
-    missing_guards = {pd.Timestamp(date): list()
-                      for date in next_dates}
+    missing_guards = {date: list() for date in next_dates}
     for index, row in df.iterrows():
         # Obtain the first_name and last_name values as scalars
         first_name = row[('שם פרטי', 'Unnamed: 0_level_1')]
@@ -64,27 +66,25 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList):
             continue
 
         for date in missing_guards:
-            next_day = date + pd.Timedelta(days=1)
+            next_date = pd.Timestamp(date + timedelta(days=1))
 
-            if (next_day, 'עד 12') in row:
-                is_guard_missing = False if row[(next_day, 'עד 12')] == 1 else True
+            if (next_date, 'עד 12') in row:
+                is_guard_missing = False if row[(next_date, 'עד 12')] == 1 else True
                 if guard in missing_guards[date] and not is_guard_missing:
                     missing_guards[date].remove(guard)
 
                 elif guard not in missing_guards[date] and is_guard_missing:
                     missing_guards[date].append(guard)
 
-    formatted_missing_guards = dict()
+    filtered_missing_guards = dict()
     for date, missing in missing_guards.items():
         # If almost all the guards absent, there must be an error in the xlsx file
         if len(missing) >= 0.9 * len(guards):
-            missing = list()
-            missing_guards[date] = missing
+            filtered_missing_guards[date] = list()
+        else:
+            filtered_missing_guards[date] = missing
 
-        weekday = get_day_of_week(date)
-        formatted_missing_guards[weekday] = missing
-
-    complete_each_guard_missing_slots(missing_guards)
+    complete_each_guard_missing_slots(filtered_missing_guards)
 
     if not_known_guards:
         print('\nNot known guards in missing guards file:')
@@ -95,4 +95,4 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList):
     if not_known_guards:
         print()
 
-    return formatted_missing_guards
+    return filtered_missing_guards

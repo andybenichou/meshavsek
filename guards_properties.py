@@ -1,46 +1,18 @@
+from datetime import datetime, timedelta
+
 from Guard import Guard
 from GuardsList import GuardsList
 
-from consts import GUARD_SPOTS, WEEK_DAYS
-from helper import get_next_week_day
+from consts import GUARD_SPOTS
+from helper import get_day_at_midnight
 
 GUARDS_LIST = GuardsList(
-    [Guard('יואל', 'אודיז', partner='ארד רז',
-           not_available_times=[{
-               'start': {
-                   'day': 'א',
-                   'hour': 11,
-               },
-               'end': {
-                   'day': 'ב',
-                   'hour': 20,
-               }
-           }]),
-     Guard('ארד', 'רז', partner='יואל אודיז',
-           not_available_times=[{
-               'start': {
-                   'day': 'א',
-                   'hour': 11,
-               },
-               'end': {
-                   'day': 'ב',
-                   'hour': 20,
-               }
-           }]),
+    [Guard('יואל', 'אודיז', partner='ארד רז'),
+     Guard('ארד', 'רז', partner='יואל אודיז'),
      Guard('ליאור', 'אבו חמדה', is_living_far_away=True,
            spots_preferences=['ש.ג.', 'פטרול']),
      Guard("אבנר", "איזרבביץ"),
-     Guard('משה', 'אייכנשטין',
-           not_available_times=[{
-               'start': {
-                   'day': 'ב',
-                   'hour': 10,
-               },
-               'end': {
-                   'day': 'ג',
-                   'hour': 7,
-               }
-           }]),
+     Guard('משה', 'אייכנשטין'),
      Guard('יונתן', 'יונג'),
      Guard('דורון', 'לביא'),
      Guard('עדן', 'אסרף', partner='אסף זבולון'),
@@ -55,28 +27,8 @@ GUARDS_LIST = GuardsList(
      Guard('אגומס', 'מלדה', partner='דעאל כהן'),
      Guard('מיכאל', 'ניסנוב'),
      Guard('לואיס', 'אברבוך'),
-     Guard('דובר', 'אלבז', partner='נריה כלפה', is_living_far_away=True,
-           not_available_times=[{
-               'start': {
-                   'day': 'א',
-                   'hour': 11,
-               },
-               'end': {
-                   'day': 'ב',
-                   'hour': 16,
-               }
-           }]),
-     Guard('נריה', 'כלפה', partner='דובר אלבז',
-           not_available_times=[{
-               'start': {
-                   'day': 'א',
-                   'hour': 11,
-               },
-               'end': {
-                   'day': 'ב',
-                   'hour': 16,
-               }
-           }]),
+     Guard('דובר', 'אלבז', partner='נריה כלפה', is_living_far_away=True),
+     Guard('נריה', 'כלפה', partner='דובר אלבז'),
      Guard('אלכסיי', 'ברומברג', partner='סרגיי לומיאנסקי'),
      Guard('סרגיי', 'לומיאנסקי', partner='אלכסיי ברומברג', is_living_far_away=True),
      Guard('איתי', 'כהן', partner='עמיחי נעים'),
@@ -99,8 +51,9 @@ GUARDS_LIST = GuardsList(
      Guard('מאור', 'סדון', partner='מיכאל נפמן'),
      Guard('איתי', 'סיני', partner='לוטם עטיה'),
      Guard('לוטם', 'עטיה', partner='איתי סיני'),
-     Guard('אור', 'נצקנסקי', spots_preferences=list(
-         filter(lambda spot: spot != 'ש.ג.', GUARD_SPOTS.keys()))),
+     Guard('אור', 'נצקנסקי',
+           spots_preferences=list(filter(lambda spot: spot != 'ש.ג.',
+                                         GUARD_SPOTS.keys()))),
      Guard('מרדוש', 'דהן', is_living_far_away=True),
      Guard('בן', 'עידה', is_guarding=False),
      Guard('נח', 'טואטי', is_guarding=False),
@@ -114,31 +67,13 @@ GUARDS_LIST = GuardsList(
                'end': 8,
            }],
            not_available_times=[{
-               'start': {
-                   'day': day,
-                   'hour': 8,
-               },
-               'end': {
-                   'day': get_next_week_day(day),
-                   'hour': 5,
-               }
-           } for day in WEEK_DAYS])
+               'start': (get_day_at_midnight(datetime.now()) + timedelta(days=i + 1)).replace(hour=8),
+               'end': (get_day_at_midnight(datetime.now()) + timedelta(days=i + 1)).replace(hour=5),
+           } for i in range(180)])
      ])
 
-# List of missing guards each day (not in use)
-MISSING_GUARDS = {
-    'א': ['מאור סדון', 'מיכאל נפמן', 'סרגיי לומיאנסקי', 'שגיא אריה', 'עדן אסרף'],
-    'ב': ['שמעון ספנייב', 'דימטרי יוספוב', 'סרגיי שבצוב', 'אור נצקנסקי', 'מיכאל ניסנוב', 'מיכאל נפמן', 'דורון לביא'],
-    'ג': ['לואיס אברבוך', 'ארד רז', 'נדב קריספין', 'נריה כלפה', "אבנר איזרבביץ", 'דעאל כהן', 'לוטם עטיה', 'מיכאל ניסנוב'],
-    'ד': ['נתנאל שרעבי', 'דוד סספורטס', 'אנדי בנישו', 'אנזו גואטה', 'מיכאל ניסנוב', 'יואל אודיז',
-          'ליאור אבו חמדה', 'איתי סיני', 'לוטם עטיה'],
-    'ה': ['אסף זבולון', 'גיא פיאצה', 'יוסף רווה', 'אייל דבוש', 'משה אייכנשטין', 'שראל בלוך', 'מיכאל ניסנוב', 'לישי גרימו',
-          'מרדוש דהן', 'אגומס מלדה', 'עמיחי נעים'],
-    'ו': ['אלכסיי ברומברג', 'עומרי דותן', 'דובר אלבז', 'עמיחי נעים', 'ירין מטמוני', 'יהונתן דימנטמן', 'מיכאל ניסנוב',
-          'יונתן יונג', 'שגיא אריה'],
-    'שבת': ['אלכסיי ברומברג', 'עומרי דותן', 'דובר אלבז', 'עמיחי נעים', 'ירין מטמוני', 'יהונתן דימנטמן', 'מיכאל ניסנוב',
-            'יונתן יונג', 'שגיא אריה']
-}
+# List of missing guards each date (not in use)
+MISSING_GUARDS = {}
 
 ROOMS_LIST = [
     {

@@ -9,7 +9,7 @@ MISSING_GUARDS_FILE_NAME = "פלוגה ג' - כל המידע מרוכז במקו
 MISSING_GUARDS_SHEET_NAME = 'כח אדם'
 
 WEEK_DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'שבת']
-ENGLISH_DAY_TO_HEBREW = {
+ENGLISH_WEEKDAY_TO_HEBREW = {
     'Sunday': 'א',
     'Monday': 'ב',
     'Tuesday': 'ג',
@@ -19,8 +19,8 @@ ENGLISH_DAY_TO_HEBREW = {
     'Saturday': 'שבת',
 }
 
-FIRST_HOUR_FIRST_DAY = 2
-LAST_HOUR_LAST_DAY = 20
+FIRST_HOUR_FIRST_DATE = 2
+LAST_HOUR_LAST_DATE = 20
 
 KITAT_KONENOUT_DURATION = 6
 MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT = 2
