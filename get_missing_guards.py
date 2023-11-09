@@ -69,12 +69,24 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList,
             next_date = pd.Timestamp(date + timedelta(days=1))
 
             if (next_date, 'עד 12') in row:
-                is_guard_missing = False if row[(next_date, 'עד 12')] == 1 else True
+                if row[(next_date, 'עד 12')] == 1 or row[(next_date, 'עד 12')] == 'חפ״ק':
+                    is_guard_missing = False
+                else:
+                    is_guard_missing = True
+
                 if guard in missing_guards[date] and not is_guard_missing:
                     missing_guards[date].remove(guard)
 
                 elif guard not in missing_guards[date] and is_guard_missing:
                     missing_guards[date].append(guard)
+
+                if row[(next_date, 'עד 12')] == "חפ''ק":
+                    time_obj = {
+                        'start': date.replace(hour=12),
+                        'end': (date + timedelta(days=1)).replace(hour=12)
+                    }
+
+                    guard.add_not_available_time(time_obj['start'], time_obj['end'])
 
     filtered_missing_guards = dict()
     for date, missing in missing_guards.items():

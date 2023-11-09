@@ -11,11 +11,13 @@ from consts import TRIES_NUMBER, MINIMAL_DELAY, \
     RANDOMNESS_LEVEL, PREVIOUS_FILE_NAME, MISSING_GUARDS_FILE_NAME, \
     GUARD_SPOTS, NEW_WATCH_LIST_FILE_NAME, FIRST_HOUR_FIRST_DATE, \
     LAST_HOUR_LAST_DATE, RETRIES_NUM_BEFORE_CRASH, KITAT_KONENOUT_DURATION, \
-    MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT, MISSING_GUARDS_SHEET_NAME
+    MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT, MISSING_GUARDS_SHEET_NAME, \
+    PARTNER_MINIMAL_DELAY, TORANOUT_PROPS
 from export import export_to_excel
 from get_previous_data import get_previous_data
 from get_missing_guards import get_missing_guards
-from helper import find_guard_slot, get_day_at_midnight, get_day_of_week
+from helper import find_guard_slot, get_day_at_midnight, get_day_of_week, \
+    sort_watch_list
 
 from guards_properties import GUARDS_LIST, ROOMS_LIST
 
@@ -119,81 +121,115 @@ def check_guards_slots_delays(watch_list, guards, need_print=False):
     return len(bad_delays)
 
 
-def get_num_guards_available(watch_list, guards_list_prop, date, spot):
+def get_num_guards_available(watch_list, guards_list_prop, date, spot=None,
+                             chosen_guards=None):
     available_num = 0
     for g in guards_list_prop:
-        if g.is_available(watch_list, date, spot=spot):
+        if g.is_available(watch_list, date, spot=spot) \
+                and ((chosen_guards and g not in chosen_guards) or not chosen_guards):
             available_num += 1
 
     return available_num
 
 
 def get_num_no_partner_guards_available(watch_list, guards_list_prop, date,
-                                        spot):
+                                        spot=None, chosen_guards=None):
     no_partner_available_num = 0
     for g in guards_list_prop:
         if g.is_available(watch_list, date, spot=spot) \
                 and (not g.partner
                      or not g.is_partner_available(guards_list_prop,
                                                    watch_list, date,
-                                                   spot)):
+                                                   spot)) \
+                and ((chosen_guards and g not in chosen_guards) or not chosen_guards):
             no_partner_available_num += 1
 
     return no_partner_available_num
 
 
+def need_break_no_same_consecutive_spot_rule(watch_list, guards_list_prop,
+                                             date, get_num_guards_available_fun,
+                                             spot, chosen_guards=None):
+    available_guards_num_no_same_spot = get_num_guards_available_fun(watch_list,
+                                                                     guards_list_prop,
+                                                                     date,
+                                                                     spot=spot,
+                                                                     chosen_guards=chosen_guards)
+    available_guards_num_total = get_num_guards_available_fun(watch_list,
+                                                              guards_list_prop,
+                                                              date,
+                                                              chosen_guards=chosen_guards)
+
+    break_no_same_consecutive_spot_rule = available_guards_num_total > 0 and available_guards_num_no_same_spot == 0
+
+    available_guards_num = available_guards_num_no_same_spot if not break_no_same_consecutive_spot_rule \
+        else available_guards_num_total
+
+    spot = spot if not break_no_same_consecutive_spot_rule else None
+
+    return break_no_same_consecutive_spot_rule, available_guards_num, spot
+
+
 def get_random_guards(watch_list, guards_list_prop, buff_cycle,
-                      same_time_partners, currently_missing_guards,
+                      same_time_partners, next_guards_to_place_when_available,
                       date, spot, guards, no_duo):
-    available_guards_num = get_num_guards_available(watch_list,
-                                                    guards_list_prop, date,
-                                                    spot)
-    if available_guards_num - len(guards) <= 0:
-        raise MaxIterationsReached
+    if no_duo:
+        break_no_same_consecutive_spot_rule, available_guards_num, spot = \
+            need_break_no_same_consecutive_spot_rule(watch_list, guards_list_prop,
+                                                     date,
+                                                     get_num_no_partner_guards_available,
+                                                     spot=spot, chosen_guards=guards)
+    else:
+        break_no_same_consecutive_spot_rule, available_guards_num, spot = \
+            need_break_no_same_consecutive_spot_rule(watch_list, guards_list_prop,
+                                                     date,
+                                                     get_num_guards_available,
+                                                     spot, chosen_guards=guards)
 
-    no_partner_guards_num = get_num_no_partner_guards_available(watch_list,
-                                                                guards_list_prop,
-                                                                date, spot)
-
-    if no_duo and no_partner_guards_num - len(guards) <= 0:
+    if available_guards_num <= 0:
         raise MaxIterationsReached
 
     random_guards = list()
+    break_while = False
     while len(random_guards) != RANDOMNESS_LEVEL:
-        if len(random_guards) + len(guards) == available_guards_num:
-            break
-
-        if no_duo and len(random_guards) + len(guards) == no_partner_guards_num:
+        if len(random_guards) == available_guards_num:
             break
 
         guard = None
         for g in same_time_partners:
-            if g.is_available(watch_list, date, spot=spot):
+            if g.is_available(watch_list, date, spot=spot,
+                              break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule):
                 guard = g
                 same_time_partners.remove(g)
 
-                if g in currently_missing_guards:
-                    currently_missing_guards.remove(g)
+                if g in next_guards_to_place_when_available:
+                    next_guards_to_place_when_available.remove(g)
+                break_while = True
                 break
 
         if not guard:
-            for g in currently_missing_guards:
-                if g.is_available(watch_list, date, spot=spot):
+            for g in next_guards_to_place_when_available:
+                if g.is_available(watch_list, date, spot=spot,
+                                  break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule):
                     guard = g
-                    currently_missing_guards.remove(g)
+                    next_guards_to_place_when_available.remove(g)
+                    break_while = True
                     break
 
         if not guard:
             guard = next(buff_cycle)
 
         if guard.is_available(watch_list, date, spot=spot) \
-                and guard not in guards:
+                and guard not in guards and guard not in random_guards:
             if no_duo and guard.partner and \
                 guard.is_partner_available(guards_list_prop, watch_list,
-                                           date, spot) and \
-                    no_partner_guards_num + len(guards) > 0:
+                                           date, spot,
+                                           break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule):
                 continue
             random_guards.append(guard)
+
+        if break_while:
+            break
 
     random.shuffle(random_guards)
     return random_guards
@@ -201,7 +237,7 @@ def get_random_guards(watch_list, guards_list_prop, buff_cycle,
 
 # Align guards cycle to the next available guard
 def get_curr_guard_available(watch_list, guards_list_prop: GuardsList,
-                             date, currently_missing_guards):
+                             date, next_guards_to_place_when_available):
     guards_cycle = cycle(guards_list_prop)
     guard = next(guards_cycle)
 
@@ -213,8 +249,8 @@ def get_curr_guard_available(watch_list, guards_list_prop: GuardsList,
 
     first_guard = guard
     while not guard.is_available(watch_list, date):
-        if guard.is_missing(date):
-            currently_missing_guards.append(guard)
+        if guard.is_missing(date) or not guard.in_time_preferences(date):
+            next_guards_to_place_when_available.append(guard)
 
         guard = next(guards_cycle)
         guards_list_prop.set_current_guard(guard)
@@ -228,28 +264,32 @@ def get_curr_guard_available(watch_list, guards_list_prop: GuardsList,
 # Helper function to get the next available guard
 def get_next_available_guard(guards_list_prop: GuardsList,
                              watch_list, date,
-                             currently_missing_guards, same_time_partners,
+                             next_guards_to_place_when_available, same_time_partners,
                              spot, break_partners: bool,
                              guards: GuardsList = None, no_duo=False):
-    no_partner_available_guards = get_num_no_partner_guards_available(watch_list,
-                                                                      guards_list_prop,
-                                                                      date,
-                                                                      spot)
-    break_partners = break_partners and (no_partner_available_guards - len(guards) > 0)
+    no_partner_available_guards = get_num_guards_available(watch_list, guards_list_prop, date, chosen_guards=guards)
+
+    break_partners = break_partners and (no_partner_available_guards - len(guards) <= 0)
 
     curr_guard = get_curr_guard_available(watch_list, guards_list_prop, date,
-                                          currently_missing_guards)
+                                          next_guards_to_place_when_available)
     index = guards_list_prop.index(curr_guard)
     buff_cycle = cycle(guards_list_prop[index:] + guards_list_prop[:index])
 
-    if get_num_guards_available(watch_list, guards_list_prop, date, spot) == 0:
+    break_no_same_consecutive_spot_rule, available_guards_num, spot = \
+        need_break_no_same_consecutive_spot_rule(watch_list, guards_list_prop,
+                                                 date,
+                                                 get_num_guards_available,
+                                                 spot, chosen_guards=guards)
+
+    if available_guards_num == 0:
         raise MaxIterationsReached
 
     chosen_guards = None
     while True:
         random_guards = get_random_guards(watch_list, guards_list_prop,
                                           buff_cycle, same_time_partners,
-                                          currently_missing_guards,
+                                          next_guards_to_place_when_available,
                                           date, spot, guards,
                                           no_duo=no_duo and not break_partners)
 
@@ -257,7 +297,8 @@ def get_next_available_guard(guards_list_prop: GuardsList,
             partner = guards_list_prop.find(guard.partner)
             if partner:
                 if not guard.is_partner_available(guards_list_prop,
-                                                  watch_list, date, spot):
+                                                  watch_list, date, spot,
+                                                  break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule):
                     chosen_guards = (guard, None)
                     break
 
@@ -290,7 +331,8 @@ def get_next_available_guard(guards_list_prop: GuardsList,
                         partner = guards_list_prop.find(partner)
                         if partner.is_available(watch_list, date,
                                                 spot=spot,
-                                                delays_prop=[0, 3, 6]):
+                                                delays_prop=list(range(0, PARTNER_MINIMAL_DELAY + 1, 3)),
+                                                break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule):
                             same_time_partners.append(partner)
             return chosen_guards
 
@@ -317,7 +359,7 @@ def get_already_filled_guard_slot(watch_list, date, spot):
 
 
 def get_guards(guards_list_prop: GuardsList, watch_list, date, spot,
-               currently_missing_guards, same_time_partners,
+               next_guards_to_place_when_available, same_time_partners,
                break_partners: bool):
     guards, fill_guard_spot = \
         get_already_filled_guard_slot(watch_list, date, spot)
@@ -331,7 +373,7 @@ def get_guards(guards_list_prop: GuardsList, watch_list, date, spot,
         guard1, guard2 = get_next_available_guard(guards_list_prop,
                                                   watch_list,
                                                   date,
-                                                  currently_missing_guards,
+                                                  next_guards_to_place_when_available,
                                                   same_time_partners,
                                                   spot,
                                                   break_partners,
@@ -345,7 +387,7 @@ def get_guards(guards_list_prop: GuardsList, watch_list, date, spot,
             guard2 = get_next_available_guard(guards_list_prop,
                                               watch_list,
                                               date,
-                                              currently_missing_guards,
+                                              next_guards_to_place_when_available,
                                               same_time_partners,
                                               spot,
                                               break_partners,
@@ -427,7 +469,7 @@ def is_date_needed(date, dates, first_hour_prop):
 
 def get_watch_list_data(guards_list_prop: GuardsList, watch_list, dates,
                         first_hour_prop, break_partners: bool):
-    currently_missing_guards = GuardsList()
+    next_guards_to_place_when_available = GuardsList()
     same_time_partners = GuardsList()
 
     # Assign guards to each slot
@@ -442,7 +484,7 @@ def get_watch_list_data(guards_list_prop: GuardsList, watch_list, dates,
             random.shuffle(spots)
             for spot in spots:
                 guards = get_guards(guards_list_prop, watch_list, date,
-                                    spot, currently_missing_guards,
+                                    spot, next_guards_to_place_when_available,
                                     same_time_partners, break_partners)
 
                 if len(guards) == GUARD_SPOTS[spot]['guards_number'] \
@@ -452,40 +494,62 @@ def get_watch_list_data(guards_list_prop: GuardsList, watch_list, dates,
                         if g in same_time_partners:
                             same_time_partners.remove(g)
 
-                        if g in currently_missing_guards:
-                            currently_missing_guards.remove(g)
+                        if g in next_guards_to_place_when_available:
+                            next_guards_to_place_when_available.remove(g)
 
                     watch_list[date][spot].extend(guards)
 
-    return watch_list
+    sorted_watch_list = sort_watch_list(watch_list)
+
+    return sorted_watch_list
 
 
-def complete_duty_rooms(duty_rooms, dates, rooms):
+def complete_duty_rooms(duty_rooms, dates, rooms, first_hour_prop):
+    last_room = None
+    need_new_room = True
     for date in dates:
-        if date not in duty_rooms:
-            last_duty_room_number = find_last_duty_room_number(duty_rooms)
-            rooms_cycle = cycle(rooms)
-            room = next(rooms_cycle)
+        for hour in range(24):
+            date = date.replace(hour=hour)
 
-            if last_duty_room_number:
-                while room.number != last_duty_room_number:
+            if not is_date_needed(date, dates, first_hour_prop):
+                continue
+
+            if not TORANOUT_PROPS['start'] <= date.hour < TORANOUT_PROPS['end']:
+                need_new_room = True
+                duty_rooms[date] = ''
+                continue
+
+            if date in duty_rooms and duty_rooms[date]:
+                last_room = duty_rooms[date]
+
+            else:
+                if not need_new_room and last_room:
+                    room = last_room
+                else:
+                    need_new_room = False
+                    rooms_cycle = cycle(rooms)
                     room = next(rooms_cycle)
 
-                room = next(rooms_cycle)
+                    if last_room:
+                        while room != last_room:
+                            room = next(rooms_cycle)
 
-            first_room_in_loop = room
-            while not room.can_be_toran:
-                room = next(rooms_cycle)
+                        room = next(rooms_cycle)
 
-                # No room can be toran
-                if room == first_room_in_loop:
-                    room = None
-                    break
+                    first_room_in_loop = room
+                    while not room.can_be_toran:
+                        room = next(rooms_cycle)
 
-            if room:
-                duty_rooms[date] = room.number
-            else:
-                duty_rooms[date] = ''
+                        # No room can be toran
+                        if room == first_room_in_loop:
+                            room = None
+                            break
+
+                last_room = room
+                if room:
+                    duty_rooms[date] = room
+                else:
+                    duty_rooms[date] = ''
 
 
 def complete_kitot_konenout(watch_list, dates, first_hour_prop, rooms: [Room],
@@ -578,13 +642,13 @@ def init(guards, print_missing_names, days_input):
 
     # Initialize the watch list
     watch_list = defaultdict(lambda: defaultdict(GuardsList))
+    rooms = get_rooms(ROOMS_LIST, guards)
     watch_list, duty_rooms, kitot_konenout_dict = \
-        get_previous_data(PREVIOUS_FILE_NAME, watch_list, guards, GUARD_SPOTS,
+        get_previous_data(PREVIOUS_FILE_NAME, watch_list, guards, rooms,
                           print_missing_names=print_missing_names)
     missing_guards = get_missing_guards(MISSING_GUARDS_FILE_NAME,
                                         MISSING_GUARDS_SHEET_NAME,
                                         guards, days_input)
-    rooms = get_rooms(ROOMS_LIST, guards)
     dates, first_hour = get_dates(watch_list, days_input)
 
     return watch_list, duty_rooms, kitot_konenout_dict, rooms, days_input, \
@@ -609,14 +673,14 @@ def plan(user_input_prop, print_missing_names, retry_after_infinite_loop_num=0,
                                                        user_input_prop)
         complete_kitot_konenout(watch_list, dates, first_hour, rooms,
                                 kitot_konenout_dict)
-        complete_duty_rooms(duty_rooms, dates, rooms)
+        complete_duty_rooms(duty_rooms, dates, rooms, first_hour)
         watch_list = get_watch_list_data(guards, watch_list, dates, first_hour,
                                          break_partners)
         delays_num = check_guards_slots_delays(watch_list, guards)
 
     except MaxIterationsReached:
-        print("Maximum number of iterations reached, retrying...")
-        return plan(user_i, print_missing_names,
+        print("Oh oh, we got ourselves into a cul-de-sac, no guards available, retrying... Wish me luck!")
+        return plan(user_i, False,
                     retry_after_infinite_loop_num=retry_after_infinite_loop_num + 1)
 
     return user_i, dates, delays_num, watch_list, duty_rooms, kitot_konenout_dict, guards, first_hour

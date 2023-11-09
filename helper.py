@@ -21,7 +21,7 @@ def get_next_dates(days_number, date: datetime = None) -> [datetime]:
     else:
         start = get_day_at_midnight(datetime.now())
 
-    dates = [start + timedelta(days=i) for i in range(days_number)]
+    dates = [start + timedelta(days=i) for i in range(days_number + 1)]
 
     return dates
 

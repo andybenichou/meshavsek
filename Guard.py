@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from copy import deepcopy
 
-from consts import MINIMAL_DELAY, GUARD_SPOTS
+from consts import MINIMAL_DELAY, GUARD_SPOTS, PARTNER_MINIMAL_DELAY
 from helper import find_guard_slot
 
 
@@ -20,8 +20,10 @@ class Guard:
             if not_available_times else list()
         self.is_guarding = is_guarding
         self.is_living_far_away = is_living_far_away
-        self.spots_preferences = spots_preferences
-        self.time_preferences = time_preferences
+        self.spots_preferences = spots_preferences \
+            if spots_preferences else list()
+        self.time_preferences = time_preferences \
+            if time_preferences else list()
         self.last_spot = last_spot
         self.room = room
 
@@ -97,8 +99,21 @@ class Guard:
                 return True
         return False
 
+    def in_time_preferences(self, date: datetime):
+        if self.time_preferences:
+            in_time_preferences = False
+            for time_pref in self.time_preferences:
+                if time_pref['start'] <= date.hour < time_pref['end']:
+                    in_time_preferences = True
+
+            if not in_time_preferences:
+                return False
+
+        return True
+
     # Helper function to check if a guard is available
-    def is_available(self, watch_list, date, spot=None, delays_prop=None):
+    def is_available(self, watch_list, date, spot=None, delays_prop=None,
+                     break_no_same_consecutive_spot_rule=False):
         def is_missing_during_spot():
             if spot:
                 guard_slot = find_guard_slot(date, spot)
@@ -130,17 +145,14 @@ class Guard:
         if is_missing_during_spot():
             return False
 
-        if spot and self.last_spot == spot:
+        if spot and self.last_spot == spot and not \
+                (self.last_spot in self.spots_preferences and
+                 len(self.spots_preferences) == 1) \
+                and not break_no_same_consecutive_spot_rule:
             return False
 
-        if self.time_preferences:
-            in_time_preferences = False
-            for time_pref in self.time_preferences:
-                if time_pref['start'] <= date.hour < time_pref['end']:
-                    in_time_preferences = True
-
-            if not in_time_preferences:
-                return False
+        if not self.in_time_preferences(date):
+            return False
 
         for rest_delay in (delays_prop if delays_prop else list(range(0, MINIMAL_DELAY + 1, 3))):
             updated_date = date - timedelta(hours=rest_delay)
@@ -154,10 +166,12 @@ class Guard:
 
         return True
 
-    def is_partner_available(self, guards_list, watch_list, date, spot):
+    def is_partner_available(self, guards_list, watch_list, date, spot,
+                             break_no_same_consecutive_spot_rule=False):
         if not self.partner:
             return True
 
         return guards_list.find(self.partner).is_available(watch_list, date,
                                                            spot=spot,
-                                                           delays_prop=[0, 3, 6])
+                                                           delays_prop=list(range(0, PARTNER_MINIMAL_DELAY + 1, 3)),
+                                                           break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule)

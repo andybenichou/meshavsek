@@ -1,7 +1,8 @@
 RANDOMNESS_LEVEL = 2
 MINIMAL_DELAY = 9
-TRIES_NUMBER = 20
-RETRIES_NUM_BEFORE_CRASH = 50
+PARTNER_MINIMAL_DELAY = 6
+TRIES_NUMBER = 1
+RETRIES_NUM_BEFORE_CRASH = 20
 
 NEW_WATCH_LIST_FILE_NAME = 'watch_list'
 PREVIOUS_FILE_NAME = 'שבצ״ק'
@@ -20,7 +21,7 @@ ENGLISH_WEEKDAY_TO_HEBREW = {
 }
 
 FIRST_HOUR_FIRST_DATE = 2
-LAST_HOUR_LAST_DATE = 20
+LAST_HOUR_LAST_DATE = 23
 
 KITAT_KONENOUT_DURATION = 6
 MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT = 2
@@ -38,16 +39,26 @@ GUARD_SPOTS = {
         'guard_duration': 3,
         'guards_number': 2,
     },
-    'פנטאוז': {
+    'סיור': {
         'start': 2,
         'duration': 24,
         'guard_duration': 3,
         'guards_number': 2,
     },
-    'פטרול': {
-        'start': 22,
-        'duration': 8,
-        'guard_duration': 4,
-        'guards_number': 2,
-    },
 }
+
+TORANOUT_PROPS = {
+    'column_name': 'תורנות',
+    'start': 10,
+    'end': 20,
+}
+
+KITOT_KONENOUT_PROPS = {
+    'column_name': 'כתת כוננות',
+    'start': None,
+    'end': None,
+    'duration': 6,
+}
+
+DAY_COLUMN_NAME = 'יום'
+HOUR_COLUMN_NAME = 'שעה'

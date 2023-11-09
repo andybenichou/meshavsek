@@ -4,7 +4,12 @@ from collections import defaultdict
 
 import pandas as pd
 
+from Guard import Guard
 from GuardsList import GuardsList
+from Room import Room
+from consts import PREVIOUS_FILE_NAME, GUARD_SPOTS, TORANOUT_PROPS, \
+    DAY_COLUMN_NAME, HOUR_COLUMN_NAME, KITOT_KONENOUT_PROPS
+from guards_properties import GUARDS_LIST
 from helper import find_guard_slot
 
 
@@ -59,7 +64,7 @@ def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
 
 
 def get_kitat_konenout(row, last_kitat_konenout):
-    kitat_konenout = row['כתת כוננות']
+    kitat_konenout = row[KITOT_KONENOUT_PROPS['column_name']]
 
     if pd.notna(kitat_konenout):
         # Search for the pattern: the word "חדר" followed by a space and one or more digits
@@ -72,52 +77,43 @@ def get_kitat_konenout(row, last_kitat_konenout):
     return last_kitat_konenout
 
 
-def get_duty_room(row):
-    for value in row:
-        if pd.notna(value) and isinstance(value, str) and 'תורני רס"פ' in value:
-            # Search for the pattern: the word "חדר" followed by a space and one or more digits
-            match = re.search(r"(\d+)", value)
+def get_duty_room(row, last_duty_room, date, rooms):
+    if not TORANOUT_PROPS['start'] <= date.hour < TORANOUT_PROPS['end']:
+        return None
 
-            # Extract the number if a match is found
-            room_number = int(match.group(1)) if match else None
+    duty_room = row[TORANOUT_PROPS['column_name']]
+    if pd.notna(duty_room):
+        # Search for the pattern: the word "חדר" followed by a space and one or more digits
+        match = re.search(r"(\d+)", duty_room)
 
-            return room_number
+        # Extract the number if a match is found
+        room_number = int(match.group(1)) if match else ''
 
-    return None
+        for r in rooms:
+            if r.number == room_number:
+                return r
+
+    return last_duty_room
 
 
 def parse_date(row):
-    if pd.notna(row['יום']):
-        return row['יום'].to_pydatetime()
+    if pd.notna(row[DAY_COLUMN_NAME]):
+        return row[DAY_COLUMN_NAME].to_pydatetime()
     return None
 
 
-def get_dates(df):
-    dates = list()
-    last_date = None
-    for index, row in df.iterrows():
-        date = parse_date(row)
-        if date:
-            last_date = date
-
-        if last_date not in dates and pd.notna(row['ש.ג.']):
-            dates.append(last_date)
-
-    return dates
-
-
 def get_previous_data(file_name, watch_list, guards_list: GuardsList,
-                      guard_spots, print_missing_names=True):
+                      rooms: [Room], print_missing_names=True):
     # Load the spreadsheet
     file_path = f'{file_name}.xlsx'
     src_previous_dir = os.path.dirname(os.path.abspath(__file__))
     previous_dir = os.path.join(src_previous_dir, file_path)
 
-    duty_room_per_date = defaultdict(int)
+    duty_rooms = defaultdict(int)
     kitot_konenout = defaultdict(int)
 
     if not os.path.exists(previous_dir):
-        return watch_list, duty_room_per_date, kitot_konenout
+        return watch_list, duty_rooms, kitot_konenout
 
     xl = pd.ExcelFile(file_path)
 
@@ -126,33 +122,37 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
 
     # Iterate through the rows
     date = None
+    duty_room = None
     kitat_konenout = None
+    guard_spots = list(filter(lambda key: key not in [DAY_COLUMN_NAME,
+                                                      HOUR_COLUMN_NAME,
+                                                      TORANOUT_PROPS['column_name'],
+                                                      KITOT_KONENOUT_PROPS['column_name']],
+                              df.columns))
+
     for index, row in df.iterrows():
         buff_date = parse_date(row)
         if date is None or buff_date != date and buff_date:
             date = buff_date
 
-            if date not in duty_room_per_date:
-                duty_room = get_duty_room(row)
-
-                if duty_room is not None:
-                    duty_room_per_date[date] = duty_room
-
-        if isinstance(row['שעה'], str):
-            hour = int(row['שעה'][:2])
+        if isinstance(row[HOUR_COLUMN_NAME], str):
+            hour = int(row[HOUR_COLUMN_NAME][:2])
         else:
-            hour = int(row['שעה'].strftime('%H'))
+            hour = int(row[HOUR_COLUMN_NAME].strftime('%H'))
 
         date = date.replace(hour=hour)
+
+        duty_room = get_duty_room(row, duty_room, date, rooms)
+        duty_rooms[date] = duty_room
 
         kitat_konenout = get_kitat_konenout(row, kitat_konenout)
         kitot_konenout[date] = kitat_konenout if kitat_konenout is not None else ''
 
-        for p in guard_spots.keys():
-            guards = find_guards(watch_list, guards_list, date, p, row,
+        for spot in guard_spots:
+            guards = find_guards(watch_list, guards_list, date, spot, row,
                                  print_missing_names)
-            watch_list[date][p] = guards
+            watch_list[date][spot] = guards
 
-        watch_list[date]['כתת כוננות'] = kitat_konenout
+        watch_list[date][KITOT_KONENOUT_PROPS['column_name']] = kitat_konenout
 
-    return watch_list, duty_room_per_date, kitot_konenout
+    return watch_list, duty_rooms, kitot_konenout
