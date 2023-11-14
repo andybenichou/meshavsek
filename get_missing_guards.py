@@ -40,7 +40,7 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList,
     xl = pd.ExcelFile(file_path)
     df = xl.parse(sheet_name, header=[0, 2])
 
-    next_dates = get_next_dates(days_input + 1,
+    next_dates = get_next_dates(days_input + 2,
                                 get_day_at_midnight(datetime.now()) - timedelta(days=1))
 
     not_known_guards = list()

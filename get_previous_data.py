@@ -7,9 +7,8 @@ import pandas as pd
 from Guard import Guard
 from GuardsList import GuardsList
 from Room import Room
-from consts import PREVIOUS_FILE_NAME, GUARD_SPOTS, TORANOUT_PROPS, \
+from consts import TORANOUT_PROPS, \
     DAY_COLUMN_NAME, HOUR_COLUMN_NAME, KITOT_KONENOUT_PROPS
-from guards_properties import GUARDS_LIST
 from helper import find_guard_slot
 
 
@@ -33,15 +32,21 @@ def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
                 if guard:
                     guard.last_spot = spot
 
-                guards_list.remove(guard)
-                guards_list.append(guard)
+                    guards_list.remove(guard)
+                    guards_list.append(guard)
 
             elif stripped_g and stripped_g not in missing_names:
                 missing_names.append(stripped_g)
 
-        guards = GuardsList([guards_list.find(g.strip())
-                             for g in row[spot].split('\n')])
-        return guards
+        guards = list()
+        for g in row[spot].split('\n'):
+            found_g = guards_list.find(g.strip())
+            if found_g:
+                guards.append(found_g)
+            elif g.strip():
+                guards.append(Guard(g.strip(), last_name=''))
+
+        return GuardsList(guards)
 
     # Find in already filled hours of the slot
     if slot:
@@ -60,10 +65,13 @@ def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
         if missing_names:
             print()
 
+    if pd.notna(row[spot]):
+        return row[spot]
+
     return GuardsList()
 
 
-def get_kitat_konenout(row, last_kitat_konenout):
+def get_kitat_konenout(row, last_kitat_konenout, last_kitat_konenout_duration):
     kitat_konenout = row[KITOT_KONENOUT_PROPS['column_name']]
 
     if pd.notna(kitat_konenout):
@@ -74,7 +82,10 @@ def get_kitat_konenout(row, last_kitat_konenout):
         room_number = int(match.group(1)) if match else None
         return room_number
 
-    return last_kitat_konenout
+    if last_kitat_konenout_duration < KITOT_KONENOUT_PROPS['duration']:
+        return last_kitat_konenout
+
+    return None
 
 
 def get_duty_room(row, last_duty_room, date, rooms):
@@ -123,13 +134,13 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
     # Iterate through the rows
     date = None
     duty_room = None
-    kitat_konenout = None
     guard_spots = list(filter(lambda key: key not in [DAY_COLUMN_NAME,
                                                       HOUR_COLUMN_NAME,
                                                       TORANOUT_PROPS['column_name'],
                                                       KITOT_KONENOUT_PROPS['column_name']],
                               df.columns))
-
+    last_kitat_konenout_duration = 0
+    last_kitat_konenout = None
     for index, row in df.iterrows():
         buff_date = parse_date(row)
         if date is None or buff_date != date and buff_date:
@@ -145,7 +156,13 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
         duty_room = get_duty_room(row, duty_room, date, rooms)
         duty_rooms[date] = duty_room
 
-        kitat_konenout = get_kitat_konenout(row, kitat_konenout)
+        kitat_konenout = get_kitat_konenout(row, last_kitat_konenout, last_kitat_konenout_duration)
+        if kitat_konenout == last_kitat_konenout:
+            last_kitat_konenout_duration += 1
+        else:
+            last_kitat_konenout_duration = 1
+            last_kitat_konenout = kitat_konenout
+
         kitot_konenout[date] = kitat_konenout if kitat_konenout is not None else ''
 
         for spot in guard_spots:
@@ -154,5 +171,7 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
             watch_list[date][spot] = guards
 
         watch_list[date][KITOT_KONENOUT_PROPS['column_name']] = kitat_konenout
+
+    print(watch_list)
 
     return watch_list, duty_rooms, kitot_konenout

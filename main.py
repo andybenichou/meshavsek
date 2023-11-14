@@ -624,10 +624,17 @@ def get_rooms(rooms_list, guards):
 
 
 def get_days_input():
+    def is_integer(input_string):
+        try:
+            int(input_string)
+            return True
+        except ValueError:
+            return False
+
     days_input = input("How many days do you need to schedule? ")
 
     while True:
-        if days_input.isdigit():
+        if is_integer(days_input):
             break
         else:
             days_input = input("Please enter a valid integer. ")
@@ -674,8 +681,9 @@ def plan(user_input_prop, print_missing_names, retry_after_infinite_loop_num=0,
         complete_kitot_konenout(watch_list, dates, first_hour, rooms,
                                 kitot_konenout_dict)
         complete_duty_rooms(duty_rooms, dates, rooms, first_hour)
-        watch_list = get_watch_list_data(guards, watch_list, dates, first_hour,
-                                         break_partners)
+        if user_i != -1:
+            watch_list = get_watch_list_data(guards, watch_list, dates, first_hour,
+                                             break_partners)
         delays_num = check_guards_slots_delays(watch_list, guards)
 
     except MaxIterationsReached:
@@ -708,7 +716,7 @@ if __name__ == '__main__':
             try_num += 1
             print(f'Try {try_num} finished')
 
-            if user_input == 0:
+            if user_input == -1:
                 break
 
     except ImpossibleToFillPlanning:

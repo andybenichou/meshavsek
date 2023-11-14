@@ -40,11 +40,17 @@ GUARD_SPOTS = {
         'guards_number': 2,
     },
     'סיור': {
-        'start': 2,
-        'duration': 24,
-        'guard_duration': 3,
+        'start': 22,
+        'duration': 8,
+        'guard_duration': 4,
         'guards_number': 2,
     },
+    'נתיבות': {
+        'start': 8,
+        'duration': 24,
+        'guard_duration': 4,
+        'guards_number': 2,
+    }
 }
 
 TORANOUT_PROPS = {
