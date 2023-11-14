@@ -172,6 +172,4 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
 
         watch_list[date][KITOT_KONENOUT_PROPS['column_name']] = kitat_konenout
 
-    print(watch_list)
-
     return watch_list, duty_rooms, kitot_konenout
