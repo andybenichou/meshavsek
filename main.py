@@ -579,8 +579,6 @@ def complete_kitot_konenout(watch_list, dates, first_hour_prop, rooms: [Room],
             kitot_konenout_dict[date] = kitat_konenout
             kitat_konenout_duration += 1
 
-            print(date, kitat_konenout)
-
 
 def get_first_hour(watch_list, dates):
     # Get first hour of first date:
