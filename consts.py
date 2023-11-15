@@ -1,5 +1,5 @@
 RANDOMNESS_LEVEL = 2
-MINIMAL_DELAY = 9
+MINIMAL_DELAY = 18
 PARTNER_MINIMAL_DELAY = 6
 TRIES_NUMBER = 20
 RETRIES_NUM_BEFORE_CRASH = 20
@@ -45,12 +45,6 @@ GUARD_SPOTS = {
         'guard_duration': 4,
         'guards_number': 2,
     },
-    'נתיבות': {
-        'start': 8,
-        'duration': 24,
-        'guard_duration': 4,
-        'guards_number': 2,
-    }
 }
 
 TORANOUT_PROPS = {
@@ -68,3 +62,6 @@ KITOT_KONENOUT_PROPS = {
 
 DAY_COLUMN_NAME = 'יום'
 HOUR_COLUMN_NAME = 'שעה'
+AVAILABLE_GUARDS_COLUMN_NAME = 'שומרים פנויים'
+
+AVAILABLE_GUARDS_FILE_NAME = 'available_guards'

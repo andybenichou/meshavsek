@@ -12,8 +12,9 @@ from consts import TRIES_NUMBER, MINIMAL_DELAY, \
     GUARD_SPOTS, NEW_WATCH_LIST_FILE_NAME, FIRST_HOUR_FIRST_DATE, \
     LAST_HOUR_LAST_DATE, RETRIES_NUM_BEFORE_CRASH, KITAT_KONENOUT_DURATION, \
     MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT, MISSING_GUARDS_SHEET_NAME, \
-    PARTNER_MINIMAL_DELAY, TORANOUT_PROPS
+    PARTNER_MINIMAL_DELAY, TORANOUT_PROPS, AVAILABLE_GUARDS_FILE_NAME
 from export import export_to_excel
+from get_available_guards_per_date import get_available_guards_per_date
 from get_previous_data import get_previous_data
 from get_missing_guards import get_missing_guards
 from helper import find_guard_slot, get_day_at_midnight, get_day_of_week, \
@@ -733,5 +734,8 @@ if __name__ == '__main__':
     check_guards_slots_delays(best_wl, guards_list, need_print=True)
     export_to_excel(NEW_WATCH_LIST_FILE_NAME, best_wl, GUARD_SPOTS,
                     duty_room_per_day, kitot_konenout)
+    get_available_guards_per_date(best_wl, guards_list,
+                                  AVAILABLE_GUARDS_FILE_NAME,
+                                  backward_delay=6, forward_delay=6)
 
     print('\nShivsakta!')

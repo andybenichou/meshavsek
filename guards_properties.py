@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from Guard import Guard
 from GuardsList import GuardsList
 
@@ -22,12 +20,8 @@ GUARDS_LIST = GuardsList(
      Guard('עדן', 'אסרף', partner='אסף זבולון'),
      Guard('אסף', 'זבולון', partner='עדן אסרף'),
      Guard('שגיא', 'אריה'),
-     Guard('אנדי', 'בנישו', partner='דוד סספורטס',
-           same_time_partners=['אנזו גואטה']),
-     Guard('אנזו', 'גואטה', is_guarding=False,
-           same_time_partners=['דוד סספורטס', 'אנדי בנישו']),
-     Guard('דוד', 'סספורטס', partner='אנדי בנישו',
-           same_time_partners=['אנזו גואטה']),
+     Guard('אנדי', 'בנישו', partner='דוד סספורטס'),
+     Guard('דוד', 'סספורטס', partner='אנדי בנישו'),
      Guard('יהונתן', 'דימנטמן', partner='ירין מטמוני'),
      Guard('ירין', 'מטמוני', partner='יהונתן דימנטמן'),
      Guard('דעאל', 'כהן', partner='אגומס מלדה'),
@@ -37,7 +31,8 @@ GUARDS_LIST = GuardsList(
      Guard('דובר', 'אלבז', partner='נריה כלפה', is_living_far_away=True),
      Guard('נריה', 'כלפה', partner='דובר אלבז'),
      Guard('אלכסיי', 'ברומברג'),
-     Guard('איתי', 'כהן', partner='עמיחי נעים'),
+     Guard('איתי', 'כהן', partner='עמיחי נעים',
+           spots_preferences=['בטונדות', 'ש.ג.']),
      Guard('עמיחי', 'נעים', partner='איתי כהן'),
      Guard('שמעון', 'ספנייב'),
      Guard('עומרי', 'דותן'),
@@ -70,8 +65,10 @@ GUARDS_LIST = GuardsList(
      Guard('בן', 'בנימין'),
      Guard('איתמר', 'בנימין'),
      Guard('גיל', 'אורון', is_guarding=False),
-     Guard('אלדד', 'הלל', is_guarding=False),
-     ])
+     Guard('פביאן', 'חויוס'),
+     Guard('חן', 'טלה'),
+     Guard('יניב', 'משה'),
+    ])
 
 # List of missing guards each date (not in use)
 MISSING_GUARDS = {}
@@ -85,7 +82,7 @@ ROOMS_LIST = [
     },
     {
         'number': 6,
-        'guards': ['דעאל כהן', 'דוד סספורטס', 'אנדי בנישו', 'אנזו גואטה'],
+        'guards': ['דעאל כהן', 'דוד סספורטס', 'אנדי בנישו'],
         'can_be_toran': True,
         'can_be_kitat_konenout': True,
     },
@@ -109,7 +106,7 @@ ROOMS_LIST = [
     },
     {
         'number': 10,
-        'guards': ['מרדוש דהן', 'איתי בהן', 'אייל דבוש', 'גיא פיאצה', 'נתנאל שרעבי', 'שראל בלוך'],
+        'guards': ['מרדוש דהן', 'איתי כהן', 'אייל דבוש', 'גיא פיאצה', 'נתנאל שרעבי', 'שראל בלוך'],
         'can_be_toran': True,
         'can_be_kitat_konenout': True,
     },

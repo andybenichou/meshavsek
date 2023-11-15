@@ -18,9 +18,6 @@ def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
 
     slot = find_guard_slot(date, spot)
 
-    if not slot:
-        return GuardsList()
-
     # First hour of the slot
     if pd.notna(row[spot]):
         found_guards = row[spot].split('\n')

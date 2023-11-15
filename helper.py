@@ -33,6 +33,9 @@ def get_day_at_midnight(date: datetime):
 
 
 def find_guard_slot(date: datetime, spot):
+    if spot not in GUARD_SPOTS:
+        return None
+
     guard_spot = GUARD_SPOTS[spot]
     t = guard_spot['start']
     duration = 0
