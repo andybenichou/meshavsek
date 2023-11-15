@@ -417,7 +417,7 @@ def find_last_duty_room_number(duty_rooms):
 
 
 def find_kitat_konenout(watch_list, kitot_konenout_dict, rooms, date):
-    if date in kitot_konenout_dict and kitot_konenout_dict[date] is not None:
+    if date in kitot_konenout_dict and kitot_konenout_dict[date]:
         return kitot_konenout_dict[date]
 
     kitot_konenout_rooms = list()
@@ -563,6 +563,11 @@ def complete_kitot_konenout(watch_list, dates, first_hour_prop, rooms: [Room],
             if not is_date_needed(date, dates, first_hour_prop):
                 continue
 
+            if kitot_konenout_dict[date]:
+                kitat_konenout = None
+                kitat_konenout_duration = 0
+                continue
+
             # Complete kitot konenout
             if kitat_konenout_duration == KITAT_KONENOUT_DURATION:
                 kitat_konenout = None
@@ -573,6 +578,8 @@ def complete_kitot_konenout(watch_list, dates, first_hour_prop, rooms: [Room],
 
             kitot_konenout_dict[date] = kitat_konenout
             kitat_konenout_duration += 1
+
+            print(date, kitat_konenout)
 
 
 def get_first_hour(watch_list, dates):
