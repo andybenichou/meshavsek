@@ -2,7 +2,7 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timedelta, time
 
-from consts import GUARD_SPOTS, ENGLISH_WEEKDAY_TO_HEBREW
+from consts import ENGLISH_WEEKDAY_TO_HEBREW
 
 
 def get_day_of_week(date: datetime):
@@ -32,11 +32,11 @@ def get_day_at_midnight(date: datetime):
     return datetime.combine(date, midnight_time)
 
 
-def find_guard_slot(date: datetime, spot):
-    if spot not in GUARD_SPOTS:
+def find_guard_slot(guards_spot, date: datetime, spot):
+    if spot not in guards_spot:
         return None
 
-    guard_spot = GUARD_SPOTS[spot]
+    guard_spot = guards_spot[spot]
     t = guard_spot['start']
     duration = 0
     slot_start_date = deepcopy(date)

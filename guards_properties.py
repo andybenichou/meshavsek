@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from Guard import Guard
 from GuardsList import GuardsList
 
@@ -17,8 +19,8 @@ GUARDS_LIST = GuardsList(
      Guard("אבנר", "יוזפוביץ"),
      Guard('יונתן', 'יונג', is_living_far_away=True),
      Guard('דורון', 'לביא'),
-     Guard('עדן', 'אסרף', partner='אסף זבולון'),
-     Guard('אסף', 'זבולון', partner='עדן אסרף'),
+     Guard('עדן', 'אסרף', partner='איתי סיני'),
+     Guard('אסף', 'זבולון'),
      Guard('שגיא', 'אריה'),
      Guard('אנדי', 'בנישו', partner='דוד סספורטס'),
      Guard('דוד', 'סספורטס', partner='אנדי בנישו'),
@@ -34,7 +36,6 @@ GUARDS_LIST = GuardsList(
      Guard('איתי', 'כהן', partner='עמיחי נעים',
            spots_preferences=['בטונדות', 'ש.ג.']),
      Guard('עמיחי', 'נעים', partner='איתי כהן'),
-     Guard('שמעון', 'ספנייב'),
      Guard('עומרי', 'דותן'),
      Guard('נדב', 'קריספין', partner='יוסף רווה', is_living_far_away=True),
      Guard('יוסף', 'רווה', partner='נדב קריספין'),
@@ -44,15 +45,25 @@ GUARDS_LIST = GuardsList(
            same_time_partners=['שראל בלוך', 'נתנאל שרעבי']),
      Guard('שראל', 'בלוך', partner='נתנאל שרעבי', is_living_far_away=True,
            same_time_partners=['אייל דבוש', 'גיא פיאצה']),
-     Guard('אדיר', 'מור', is_guarding=False),
+     Guard('אדיר', 'מור',
+           not_available_times=[{
+               'start': datetime(year=2023, month=11, day=16, hour=17),
+               'end': datetime(year=2023, month=11, day=17, hour=5),
+           }]),
      Guard('נתנאל', 'שרעבי', partner='שראל בלוך',
            same_time_partners=['אייל דבוש', 'גיא פיאצה']),
-     Guard('דימטרי', 'יוספוב', partner='סרגיי שבצוב'),
-     Guard('סרגיי', 'שבצוב', partner='דימטרי יוספוב'),
-     Guard('מיכאל', 'נפמן', partner='מאור סדון'),
-     Guard('מאור', 'סדון', partner='מיכאל נפמן'),
-     Guard('איתי', 'סיני', partner='לוטם עטיה'),
-     Guard('לוטם', 'עטיה', partner='איתי סיני'),
+     Guard('דימטרי', 'יוספוב', partner='סרגיי שבצוב',
+           not_available_times=[{
+               'start': datetime(year=2023, month=11, day=16, hour=17),
+               'end': datetime(year=2023, month=11, day=17, hour=8),
+           }]),
+     Guard('סרגיי', 'שבצוב', partner='דימטרי יוספוב',
+           not_available_times=[{
+               'start': datetime(year=2023, month=11, day=16, hour=17),
+               'end': datetime(year=2023, month=11, day=17, hour=8),
+           }]),
+     Guard('איתי', 'סיני', partner='עדן אסרף'),
+     Guard('לוטם', 'עטיה'),
      Guard('אור', 'נצקנסקי',
            spots_preferences=list(filter(lambda spot: spot != 'ש.ג.',
                                          GUARD_SPOTS.keys()))),
@@ -76,7 +87,7 @@ MISSING_GUARDS = {}
 ROOMS_LIST = [
     {
         'number': 5,
-        'guards': ['מיכאל נפמן', 'מאור סדון', 'איתי סיני', 'לואיס אברבוך', 'עמיחי נעים', 'עדן אסרף'],
+        'guards': ['איתי סיני', 'לואיס אברבוך', 'עמיחי נעים', 'עדן אסרף'],
         'can_be_toran': True,
         'can_be_kitat_konenout': True,
     },
@@ -112,7 +123,7 @@ ROOMS_LIST = [
     },
     {
         'number': 11,
-        'guards': ['יואל אודיז', 'נריה כלפה', 'ארד רז', 'דובר אלבז', 'שמעון ספנייב'],
+        'guards': ['יואל אודיז', 'נריה כלפה', 'ארד רז', 'דובר אלבז'],
         'can_be_toran': True,
         'can_be_kitat_konenout': True,
     },

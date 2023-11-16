@@ -8,15 +8,16 @@ from Guard import Guard
 from GuardsList import GuardsList
 from Room import Room
 from consts import TORANOUT_PROPS, \
-    DAY_COLUMN_NAME, HOUR_COLUMN_NAME, KITOT_KONENOUT_PROPS
+    DAY_COLUMN_NAME, HOUR_COLUMN_NAME, KITOT_KONENOUT_PROPS, \
+    PREVIOUS_GUARD_SPOTS
 from helper import find_guard_slot
 
 
 def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
-                print_missing_names=True):
+                guards_spot, print_missing_names=True):
     missing_names = list()
 
-    slot = find_guard_slot(date, spot)
+    slot = find_guard_slot(guards_spot, date, spot)
 
     # First hour of the slot
     if pd.notna(row[spot]):
@@ -111,7 +112,7 @@ def parse_date(row):
 
 
 def get_previous_data(file_name, watch_list, guards_list: GuardsList,
-                      rooms: [Room], print_missing_names=True):
+                      rooms: [Room], print_unknown_names=True):
     # Load the spreadsheet
     file_path = f'{file_name}.xlsx'
     src_previous_dir = os.path.dirname(os.path.abspath(__file__))
@@ -164,9 +165,8 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
 
         for spot in guard_spots:
             guards = find_guards(watch_list, guards_list, date, spot, row,
-                                 print_missing_names)
+                                 PREVIOUS_GUARD_SPOTS,
+                                 print_missing_names=print_unknown_names)
             watch_list[date][spot] = guards
-
-        watch_list[date][KITOT_KONENOUT_PROPS['column_name']] = kitat_konenout
 
     return watch_list, duty_rooms, kitot_konenout

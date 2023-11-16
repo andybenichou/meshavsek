@@ -112,12 +112,13 @@ class Guard:
         return True
 
     # Helper function to check if a guard is available
-    def is_available(self, watch_list, date, spot=None, delays_prop=None,
+    def is_available(self, watch_list, date, spot=None,
+                     delays_prop=None,
                      break_no_same_consecutive_spot_rule=False,
                      not_missing_delay=0):
         def is_missing_during_spot():
             if spot:
-                guard_slot = find_guard_slot(date, spot)
+                guard_slot = find_guard_slot(GUARD_SPOTS, date, spot)
                 if guard_slot:
                     for missing_times in self.not_available_times:
                         # Leaves before the beginning
@@ -157,14 +158,15 @@ class Guard:
         if not self.in_time_preferences(date):
             return False
 
-        for rest_delay in (delays_prop if delays_prop else list(range(0, MINIMAL_DELAY + 1, 3))):
+        for rest_delay in (delays_prop if delays_prop else list(range(0, MINIMAL_DELAY + 1))):
             updated_date = date - timedelta(hours=rest_delay)
 
+            if updated_date not in watch_list:
+                continue
+
             # Check if the guard already in another spot
-            for spot_name in GUARD_SPOTS:
-                slot = find_guard_slot(updated_date, spot_name)
-                if slot and slot['start'] in watch_list and \
-                        self in watch_list[slot['start']][spot_name]:
+            for spot_name in watch_list[updated_date]:
+                if self in watch_list[updated_date][spot_name]:
                     return False
 
         return True

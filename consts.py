@@ -1,7 +1,7 @@
 RANDOMNESS_LEVEL = 2
-MINIMAL_DELAY = 18
+MINIMAL_DELAY = 12
 PARTNER_MINIMAL_DELAY = 6
-TRIES_NUMBER = 20
+TRIES_NUMBER = 1
 RETRIES_NUM_BEFORE_CRASH = 20
 
 NEW_WATCH_LIST_FILE_NAME = 'watch_list'
@@ -45,6 +45,39 @@ GUARD_SPOTS = {
         'guard_duration': 4,
         'guards_number': 2,
     },
+    'נתיבות': {
+        'start': 8,
+        'duration': 24,
+        'guard_duration': 4,
+        'guards_number': 2,
+    }
+}
+
+PREVIOUS_GUARD_SPOTS = {
+    'ש.ג.': {
+        'start': 2,
+        'duration': 24,
+        'guard_duration': 3,
+        'guards_number': 2,
+    },
+    'בטונדות': {
+        'start': 2,
+        'duration': 24,
+        'guard_duration': 3,
+        'guards_number': 2,
+    },
+    'סיור': {
+        'start': 22,
+        'duration': 8,
+        'guard_duration': 4,
+        'guards_number': 2,
+    },
+    'נתיבות': {
+        'start': 8,
+        'duration': 24,
+        'guard_duration': 4,
+        'guards_number': 2,
+    }
 }
 
 TORANOUT_PROPS = {
@@ -64,4 +97,4 @@ DAY_COLUMN_NAME = 'יום'
 HOUR_COLUMN_NAME = 'שעה'
 AVAILABLE_GUARDS_COLUMN_NAME = 'שומרים פנויים'
 
-AVAILABLE_GUARDS_FILE_NAME = 'available_guards'
+AVAILABLE_GUARDS_SHEET_NAME = 'Available'

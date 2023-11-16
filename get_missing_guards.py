@@ -15,7 +15,7 @@ def complete_each_guard_missing_slots(missing_guards):
             exit_hour = 12 if not guard.is_living_far_away else 10
             return_hour = 12 if not guard.is_living_far_away else 16
 
-            if weekday == 'שישי':
+            if weekday == 'ו':
                 return_hour = 21 if not guard.is_living_far_away else 23
 
             time_obj = {
@@ -27,7 +27,7 @@ def complete_each_guard_missing_slots(missing_guards):
 
 
 def get_missing_guards(file_name, sheet_name, guards: GuardsList,
-                       days_input: int):
+                       days_input: int, print_unknown_guards=True):
     file_path = f'{file_name}.xlsx'
     src_missing_dir = os.path.dirname(os.path.abspath(__file__))
     missing_dir = os.path.join(src_missing_dir, file_path)
@@ -98,13 +98,14 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList,
 
     complete_each_guard_missing_slots(filtered_missing_guards)
 
-    if not_known_guards:
-        print('\nNot known guards in missing guards file:')
+    if print_unknown_guards:
+        if not_known_guards:
+            print('\nNot known guards in missing guards file:')
 
-    for guard in not_known_guards:
-        print(guard)
+        for guard in not_known_guards:
+            print(guard)
 
-    if not_known_guards:
-        print()
+        if not_known_guards:
+            print()
 
     return filtered_missing_guards

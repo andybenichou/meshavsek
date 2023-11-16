@@ -12,7 +12,7 @@ from consts import TRIES_NUMBER, MINIMAL_DELAY, \
     GUARD_SPOTS, NEW_WATCH_LIST_FILE_NAME, FIRST_HOUR_FIRST_DATE, \
     LAST_HOUR_LAST_DATE, RETRIES_NUM_BEFORE_CRASH, KITAT_KONENOUT_DURATION, \
     MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT, MISSING_GUARDS_SHEET_NAME, \
-    PARTNER_MINIMAL_DELAY, TORANOUT_PROPS, AVAILABLE_GUARDS_FILE_NAME
+    PARTNER_MINIMAL_DELAY, TORANOUT_PROPS
 from export import export_to_excel
 from get_available_guards_per_date import get_available_guards_per_date
 from get_previous_data import get_previous_data
@@ -82,7 +82,7 @@ def get_guards_slots(watch_list, guards):
         for date in watch_list:
             for spot in GUARD_SPOTS:
                 if guard in watch_list[date][spot]:
-                    slot = find_guard_slot(date, spot)
+                    slot = find_guard_slot(GUARD_SPOTS, date, spot)
                     if slot and slot not in guard_slots[str(guard)]:
                         guard_slots[str(guard)].append(slot)
 
@@ -348,7 +348,7 @@ def get_already_filled_guard_slot(watch_list, date, spot):
 
     # Fill the actual hour with the slot guards if there are already in one of
     # the slot
-    slot = find_guard_slot(date, spot)
+    slot = find_guard_slot(GUARD_SPOTS, date, spot)
 
     if slot:
         guards = watch_list[slot['start']][spot]
@@ -649,7 +649,7 @@ def get_days_input():
     return int(days_input)
 
 
-def init(guards, print_missing_names, days_input):
+def init(guards, print_unknown_names, days_input):
     if days_input is None:
         days_input = get_days_input()
 
@@ -658,17 +658,18 @@ def init(guards, print_missing_names, days_input):
     rooms = get_rooms(ROOMS_LIST, guards)
     watch_list, duty_rooms, kitot_konenout_dict = \
         get_previous_data(PREVIOUS_FILE_NAME, watch_list, guards, rooms,
-                          print_missing_names=print_missing_names)
+                          print_unknown_names=print_unknown_names)
     missing_guards = get_missing_guards(MISSING_GUARDS_FILE_NAME,
                                         MISSING_GUARDS_SHEET_NAME,
-                                        guards, days_input)
+                                        guards, days_input,
+                                        print_unknown_guards=print_unknown_names)
     dates, first_hour = get_dates(watch_list, days_input)
 
     return watch_list, duty_rooms, kitot_konenout_dict, rooms, days_input, \
         dates, first_hour, missing_guards
 
 
-def plan(user_input_prop, print_missing_names, retry_after_infinite_loop_num=0,
+def plan(user_input_prop, print_unknown_names, retry_after_infinite_loop_num=0,
          break_partners=False):
     user_i = user_input_prop
     try:
@@ -676,13 +677,13 @@ def plan(user_input_prop, print_missing_names, retry_after_infinite_loop_num=0,
             if break_partners:
                 raise ImpossibleToFillPlanning
             else:
-                return plan(user_i, print_missing_names,
+                return plan(user_i, print_unknown_names,
                             retry_after_infinite_loop_num=0,
                             break_partners=True)
 
         guards = deepcopy(GUARDS_LIST)
         watch_list, duty_rooms, kitot_konenout_dict, \
-            rooms, user_i, dates, first_hour, _ = init(guards, print_missing_names,
+            rooms, user_i, dates, first_hour, _ = init(guards, print_unknown_names,
                                                        user_input_prop)
         complete_kitot_konenout(watch_list, dates, first_hour, rooms,
                                 kitot_konenout_dict)
@@ -735,7 +736,7 @@ if __name__ == '__main__':
     export_to_excel(NEW_WATCH_LIST_FILE_NAME, best_wl, GUARD_SPOTS,
                     duty_room_per_day, kitot_konenout)
     get_available_guards_per_date(best_wl, guards_list,
-                                  AVAILABLE_GUARDS_FILE_NAME,
+                                  NEW_WATCH_LIST_FILE_NAME,
                                   backward_delay=6, forward_delay=6)
 
     print('\nShivsakta!')
