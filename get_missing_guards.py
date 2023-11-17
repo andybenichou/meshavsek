@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -28,6 +29,14 @@ def complete_each_guard_missing_slots(missing_guards):
 
 def get_missing_guards(file_name, sheet_name, guards: GuardsList,
                        days_input: int, print_unknown_guards=True):
+    def is_valid_format(time_range):
+        if not isinstance(time_range, str):
+            return False
+
+        # Regular expression pattern to match the formats "0-0" or "00-00"
+        pattern = r'^\d{1,2}-\d{1,2}$'
+        return bool(re.match(pattern, time_range))
+
     file_path = f'{file_name}.xlsx'
     src_missing_dir = os.path.dirname(os.path.abspath(__file__))
     missing_dir = os.path.join(src_missing_dir, file_path)
@@ -66,16 +75,46 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList,
             continue
 
         for date in missing_guards:
-            next_date = pd.Timestamp(date + timedelta(days=1))
+            if (date, 'מ12') in row:
+                if pd.notna(row[(date, 'מ12')]) \
+                        and is_valid_format(row[(date, 'מ12')]):
+                    start_hour, end_hour = row[(date, 'מ12')].split('-')
 
+                    if start_hour or end_hour:
+                        start_hour = int(start_hour)
+                        end_hour = int(end_hour)
+
+                        if start_hour < end_hour:
+                            end_date = date if end_hour < 24 else date + timedelta(days=1)
+                            end_hour %= 24
+
+                            time_obj = {
+                                'start': date.replace(hour=start_hour),
+                                'end': end_date.replace(hour=end_hour)
+                            }
+
+                            guard.add_not_available_time(time_obj['start'], time_obj['end'])
+
+            next_date = pd.Timestamp(date + timedelta(days=1))
             if (next_date, 'עד 12') in row:
-                if row[(next_date, 'עד 12')] == 1 or row[(next_date, 'עד 12')] == 'חפ״ק':
-                    is_guard_missing = False
-                else:
+                if pd.isna(row[(next_date, 'עד 12')]) or not row[(next_date, 'עד 12')]:
                     is_guard_missing = True
+                else:
+                    is_guard_missing = False
 
                 if guard in missing_guards[date] and not is_guard_missing:
                     missing_guards[date].remove(guard)
+
+                elif guard not in missing_guards[date] and is_guard_missing:
+                    missing_guards[date].append(guard)
+
+                if row[(next_date, 'עד 12')] == "חפ''ק":
+                    time_obj = {
+                        'start': date.replace(hour=12),
+                        'end': (date + timedelta(days=1)).replace(hour=12)
+                    }
+
+                    guard.add_not_available_time(time_obj['start'], time_obj['end'])
 
                 elif guard not in missing_guards[date] and is_guard_missing:
                     missing_guards[date].append(guard)
