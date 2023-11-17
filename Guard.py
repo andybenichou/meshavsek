@@ -8,6 +8,7 @@ from helper import find_guard_slot
 class Guard:
     def __init__(self, first_name, last_name,
                  partner=None, same_time_partners=None,
+                 not_partners=None,
                  not_available_times=None,
                  is_guarding=True, is_living_far_away=False,
                  spots_preferences=None, time_preferences=None,
@@ -16,6 +17,7 @@ class Guard:
         self.last_name = last_name
         self.partner = partner
         self.same_time_partners = same_time_partners if same_time_partners else list()
+        self.not_partners = not_partners if not_partners else list()
         self.not_available_times = not_available_times \
             if not_available_times else list()
         self.is_guarding = is_guarding
@@ -45,9 +47,17 @@ class Guard:
 
     def __deepcopy__(self, memo=None):
         # Create a new instance with 'None' for deep attributes initially to avoid recursive deepcopy calls
-        new_guard = Guard(self.first_name, self.last_name, self.partner,
-                          None, None, self.is_guarding, self.is_living_far_away,
-                          None, None, self.last_spot)
+        new_guard = Guard(first_name=self.first_name,
+                          last_name=self.last_name,
+                          partner=self.partner,
+                          same_time_partners=None,
+                          not_partners=None,
+                          is_guarding=self.is_guarding,
+                          is_living_far_away=self.is_living_far_away,
+                          spots_preferences=None,
+                          time_preferences=None,
+                          last_spot=self.last_spot,
+                          room=None)
 
         # Add the new instance to the memo dictionary to avoid recursive loops
         memo = memo or {}
@@ -57,7 +67,9 @@ class Guard:
         new_guard.not_available_times = deepcopy(self.not_available_times, memo)
         new_guard.time_preferences = deepcopy(self.time_preferences, memo)
         new_guard.same_time_partners = deepcopy(self.same_time_partners, memo)
+        new_guard.not_partners = deepcopy(self.not_partners, memo)
         new_guard.spots_preferences = deepcopy(self.spots_preferences, memo)
+        new_guard.room = deepcopy(self.room, memo)
 
         return new_guard
 
@@ -115,7 +127,7 @@ class Guard:
     def is_available(self, watch_list, date, spot=None,
                      delays_prop=None,
                      break_no_same_consecutive_spot_rule=False,
-                     not_missing_delay=0):
+                     not_missing_delay=0, curr_guards=None):
         def is_missing_during_spot():
             if spot:
                 guard_slot = find_guard_slot(GUARD_SPOTS, date, spot)
@@ -157,6 +169,11 @@ class Guard:
 
         if not self.in_time_preferences(date):
             return False
+
+        if curr_guards:
+            for g in curr_guards:
+                if g in self.not_partners or self in g.not_partners:
+                    return False
 
         for rest_delay in (delays_prop if delays_prop else list(range(0, MINIMAL_DELAY + 1))):
             updated_date = date - timedelta(hours=rest_delay)

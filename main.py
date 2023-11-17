@@ -126,7 +126,7 @@ def get_num_guards_available(watch_list, guards_list_prop, date, spot=None,
                              chosen_guards=None):
     available_num = 0
     for g in guards_list_prop:
-        if g.is_available(watch_list, date, spot=spot) \
+        if g.is_available(watch_list, date, spot=spot, curr_guards=chosen_guards) \
                 and ((chosen_guards and g not in chosen_guards) or not chosen_guards):
             available_num += 1
 
@@ -137,7 +137,7 @@ def get_num_no_partner_guards_available(watch_list, guards_list_prop, date,
                                         spot=None, chosen_guards=None):
     no_partner_available_num = 0
     for g in guards_list_prop:
-        if g.is_available(watch_list, date, spot=spot) \
+        if g.is_available(watch_list, date, spot=spot, curr_guards=chosen_guards) \
                 and (not g.partner
                      or not g.is_partner_available(guards_list_prop,
                                                    watch_list, date,
@@ -199,7 +199,8 @@ def get_random_guards(watch_list, guards_list_prop, buff_cycle,
         guard = None
         for g in same_time_partners:
             if g.is_available(watch_list, date, spot=spot,
-                              break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule):
+                              break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule,
+                              curr_guards=guards):
                 guard = g
                 same_time_partners.remove(g)
 
@@ -211,7 +212,8 @@ def get_random_guards(watch_list, guards_list_prop, buff_cycle,
         if not guard:
             for g in next_guards_to_place_when_available:
                 if g.is_available(watch_list, date, spot=spot,
-                                  break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule):
+                                  break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule,
+                                  curr_guards=guards):
                     guard = g
                     next_guards_to_place_when_available.remove(g)
                     break_while = True
@@ -220,7 +222,7 @@ def get_random_guards(watch_list, guards_list_prop, buff_cycle,
         if not guard:
             guard = next(buff_cycle)
 
-        if guard.is_available(watch_list, date, spot=spot) \
+        if guard.is_available(watch_list, date, spot=spot, curr_guards=guards) \
                 and guard not in guards and guard not in random_guards:
             if no_duo and guard.partner and \
                 guard.is_partner_available(guards_list_prop, watch_list,

@@ -15,7 +15,11 @@ GUARDS_LIST = GuardsList(
      Guard('יואל', 'אודיז', partner='ארד רז'),
      Guard('ארד', 'רז', partner='יואל אודיז'),
      Guard('ליאור', 'אבו חמדה', is_living_far_away=True,
-           spots_preferences=['ש.ג.']),
+           spots_preferences=['ש.ג.'],
+           not_available_times=[{
+               'start': datetime(year=2023, month=11, day=17, hour=20),
+               'end': datetime(year=2023, month=11, day=18, hour=23),
+           }]),
      Guard("אבנר", "יוזפוביץ"),
      Guard('יונתן', 'יונג', is_living_far_away=True),
      Guard('דורון', 'לביא'),
@@ -36,7 +40,11 @@ GUARDS_LIST = GuardsList(
      Guard('איתי', 'כהן', partner='עמיחי נעים',
            spots_preferences=['בטונדות', 'ש.ג.']),
      Guard('עמיחי', 'נעים', partner='איתי כהן'),
-     Guard('עומרי', 'דותן'),
+     Guard('עומרי', 'דותן',
+           not_available_times=[{
+               'start': datetime(year=2023, month=11, day=17, hour=20),
+               'end': datetime(year=2023, month=11, day=18, hour=17),
+           }]),
      Guard('נדב', 'קריספין', partner='יוסף רווה', is_living_far_away=True),
      Guard('יוסף', 'רווה', partner='נדב קריספין'),
      Guard('אייל', 'דבוש', partner='גיא פיאצה', is_living_far_away=True,
@@ -63,7 +71,7 @@ GUARDS_LIST = GuardsList(
                'end': datetime(year=2023, month=11, day=17, hour=8),
            }]),
      Guard('איתי', 'סיני', partner='עדן אסרף'),
-     Guard('לוטם', 'עטיה'),
+     Guard('לוטם', 'עטיה', not_partners=['אסף זבולון']),
      Guard('אור', 'נצקנסקי',
            spots_preferences=list(filter(lambda spot: spot != 'ש.ג.',
                                          GUARD_SPOTS.keys()))),
@@ -79,7 +87,9 @@ GUARDS_LIST = GuardsList(
      Guard('פביאן', 'חויוס'),
      Guard('חן', 'טלה'),
      Guard('יניב', 'משה'),
-    ])
+     Guard('זיטר', 'יצחק'),
+     Guard('ראובן', 'מאור'),
+     ])
 
 # List of missing guards each date (not in use)
 MISSING_GUARDS = {}
@@ -99,25 +109,29 @@ ROOMS_LIST = [
     },
     {
         'number': 7,
-        'guards': ['מאור ניקחה', 'נדב קריספין', 'אגומס מלדה', 'מיכאל ניסנוב', 'שגיא אריה', "אבנר יוזפוביץ"],
+        'guards': ['מאור ניקחה', 'נדב קריספין', 'אגומס מלדה', 'מיכאל ניסנוב',
+                   'שגיא אריה', "אבנר יוזפוביץ"],
         'can_be_toran': True,
         'can_be_kitat_konenout': True,
     },
     {
         'number': 8,
-        'guards': ['אסף זבולון', 'סרגיי שבצוב', 'דימטרי יוספוב', 'יהונתן דימנטמן', 'ירין מטמוני'],
+        'guards': ['אסף זבולון', 'סרגיי שבצוב', 'דימטרי יוספוב',
+                   'יהונתן דימנטמן', 'ירין מטמוני'],
         'can_be_toran': True,
         'can_be_kitat_konenout': True,
     },
     {
         'number': 9,
-        'guards': ['יוסף רווה', 'אור נצקנסקי', 'יונתן יונג', 'לוטם עטיה', 'לישי גרימו'],
+        'guards': ['יוסף רווה', 'אור נצקנסקי', 'יונתן יונג', 'לוטם עטיה',
+                   'לישי גרימו'],
         'can_be_toran': True,
         'can_be_kitat_konenout': True,
     },
     {
         'number': 10,
-        'guards': ['מרדוש דהן', 'איתי כהן', 'אייל דבוש', 'גיא פיאצה', 'נתנאל שרעבי', 'שראל בלוך'],
+        'guards': ['מרדוש דהן', 'איתי כהן', 'אייל דבוש', 'גיא פיאצה',
+                   'נתנאל שרעבי', 'שראל בלוך'],
         'can_be_toran': True,
         'can_be_kitat_konenout': True,
     },
@@ -129,7 +143,8 @@ ROOMS_LIST = [
     },
     {
         'number': 12,
-        'guards': ['עומרי דותן', 'ליאור אבו חמדה', 'נח טואטי', 'בן עידה', 'רועי קלפסקי'],
+        'guards': ['עומרי דותן', 'ליאור אבו חמדה', 'נח טואטי', 'בן עידה',
+                   'רועי קלפסקי'],
         'can_be_toran': False,
         'can_be_kitat_konenout': False,
     },
