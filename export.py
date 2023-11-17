@@ -6,8 +6,8 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, Border, Side, Alignment, PatternFill
 from openpyxl.utils.exceptions import IllegalCharacterError
 
-from consts import TORANOUT_PROPS, KITOT_KONENOUT_PROPS, GUARD_SPOTS, \
-    DAY_COLUMN_NAME, HOUR_COLUMN_NAME
+from consts import TORANOUT_PROPS, GUARD_SPOTS, DAY_COLUMN_NAME, \
+    HOUR_COLUMN_NAME
 
 
 def export_to_CSV(watch_list, guard_spots):
@@ -38,9 +38,9 @@ def parse_date(date: datetime):
     return date.date()
 
 
-def get_excel_data_frame(watch_list, guard_spots, duty_room_per_day, kitot_konenout):
+def get_excel_data_frame(watch_list, guard_spots, duty_room_per_day):
     columns = [DAY_COLUMN_NAME, HOUR_COLUMN_NAME] + list(guard_spots.keys()) + \
-              [KITOT_KONENOUT_PROPS['column_name'], TORANOUT_PROPS['column_name']]
+              [TORANOUT_PROPS['column_name']]
     data = list()
 
     for date in watch_list:
@@ -54,21 +54,11 @@ def get_excel_data_frame(watch_list, guard_spots, duty_room_per_day, kitot_konen
 
             row.append(guards_str)
 
-        for spot in [KITOT_KONENOUT_PROPS['column_name'], TORANOUT_PROPS['column_name']]:
-            if spot == TORANOUT_PROPS['column_name'] \
-                    and date in duty_room_per_day:
-                if duty_room_per_day[date]:
-                    row.append(f'{duty_room_per_day[date].number} חדר')
-                else:
-                    row.append(' ')
-
-            if spot == KITOT_KONENOUT_PROPS['column_name'] \
-                    and date in kitot_konenout \
-                    and kitot_konenout[date] is not None:
-                if kitot_konenout[date]:
-                    row.append(f'{kitot_konenout[date]} חדר')
-                else:
-                    row.append(' ')
+        if date in duty_room_per_day:
+            if duty_room_per_day[date]:
+                row.append(f'{duty_room_per_day[date].number} חדר')
+            else:
+                row.append(' ')
 
         if not is_row_empty(row):
             data.append(row)
@@ -156,8 +146,8 @@ def format_excel(df, worksheet):
     adjust_columns_and_rows(worksheet)
 
 
-def export_to_excel(file_name, watch_list, guard_spots, duty_room_per_day, kitot_konenout):
-    df = get_excel_data_frame(watch_list, guard_spots, duty_room_per_day, kitot_konenout)
+def export_to_excel(file_name, watch_list, guard_spots, duty_room_per_day):
+    df = get_excel_data_frame(watch_list, guard_spots, duty_room_per_day)
 
     # Save to Excel
     excel_path = f'{file_name}.xlsx'

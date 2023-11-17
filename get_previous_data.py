@@ -119,10 +119,10 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
     previous_dir = os.path.join(src_previous_dir, file_path)
 
     duty_rooms = defaultdict(int)
-    kitot_konenout = defaultdict(int)
+    # kitot_konenout = defaultdict(int)
 
     if not os.path.exists(previous_dir):
-        return watch_list, duty_rooms, kitot_konenout
+        return watch_list, duty_rooms
 
     xl = pd.ExcelFile(file_path)
 
@@ -137,8 +137,8 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
                                                       TORANOUT_PROPS['column_name'],
                                                       KITOT_KONENOUT_PROPS['column_name']],
                               df.columns))
-    last_kitat_konenout_duration = 0
-    last_kitat_konenout = None
+    # last_kitat_konenout_duration = 0
+    # last_kitat_konenout = None
     for index, row in df.iterrows():
         buff_date = parse_date(row)
         if date is None or buff_date != date and buff_date:
@@ -154,14 +154,14 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
         duty_room = get_duty_room(row, duty_room, date, rooms)
         duty_rooms[date] = duty_room
 
-        kitat_konenout = get_kitat_konenout(row, last_kitat_konenout, last_kitat_konenout_duration)
-        if kitat_konenout == last_kitat_konenout:
-            last_kitat_konenout_duration += 1
-        else:
-            last_kitat_konenout_duration = 1
-            last_kitat_konenout = kitat_konenout
-
-        kitot_konenout[date] = kitat_konenout if kitat_konenout is not None else ''
+        # kitat_konenout = get_kitat_konenout(row, last_kitat_konenout, last_kitat_konenout_duration)
+        # if kitat_konenout == last_kitat_konenout:
+        #     last_kitat_konenout_duration += 1
+        # else:
+        #     last_kitat_konenout_duration = 1
+        #     last_kitat_konenout = kitat_konenout
+        #
+        # kitot_konenout[date] = kitat_konenout if kitat_konenout is not None else ''
 
         for spot in guard_spots:
             guards = find_guards(watch_list, guards_list, date, spot, row,
@@ -169,4 +169,4 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
                                  print_missing_names=print_unknown_names)
             watch_list[date][spot] = guards
 
-    return watch_list, duty_rooms, kitot_konenout
+    return watch_list, duty_rooms

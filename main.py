@@ -656,7 +656,7 @@ def init(guards, print_unknown_names, days_input):
     # Initialize the watch list
     watch_list = defaultdict(lambda: defaultdict(GuardsList))
     rooms = get_rooms(ROOMS_LIST, guards)
-    watch_list, duty_rooms, kitot_konenout_dict = \
+    watch_list, duty_rooms = \
         get_previous_data(PREVIOUS_FILE_NAME, watch_list, guards, rooms,
                           print_unknown_names=print_unknown_names)
     missing_guards = get_missing_guards(MISSING_GUARDS_FILE_NAME,
@@ -665,7 +665,7 @@ def init(guards, print_unknown_names, days_input):
                                         print_unknown_guards=print_unknown_names)
     dates, first_hour = get_dates(watch_list, days_input)
 
-    return watch_list, duty_rooms, kitot_konenout_dict, rooms, days_input, \
+    return watch_list, duty_rooms, rooms, days_input, \
         dates, first_hour, missing_guards
 
 
@@ -682,11 +682,9 @@ def plan(user_input_prop, print_unknown_names, retry_after_infinite_loop_num=0,
                             break_partners=True)
 
         guards = deepcopy(GUARDS_LIST)
-        watch_list, duty_rooms, kitot_konenout_dict, \
+        watch_list, duty_rooms, \
             rooms, user_i, dates, first_hour, _ = init(guards, print_unknown_names,
                                                        user_input_prop)
-        complete_kitot_konenout(watch_list, dates, first_hour, rooms,
-                                kitot_konenout_dict)
         complete_duty_rooms(duty_rooms, dates, rooms, first_hour)
         if user_i != -1:
             watch_list = get_watch_list_data(guards, watch_list, dates, first_hour,
@@ -698,7 +696,7 @@ def plan(user_input_prop, print_unknown_names, retry_after_infinite_loop_num=0,
         return plan(user_i, False,
                     retry_after_infinite_loop_num=retry_after_infinite_loop_num + 1)
 
-    return user_i, dates, delays_num, watch_list, duty_rooms, kitot_konenout_dict, guards, first_hour
+    return user_i, dates, delays_num, watch_list, duty_rooms, guards, first_hour
 
 
 if __name__ == '__main__':
@@ -709,12 +707,11 @@ if __name__ == '__main__':
     dates_list = list()
     guards_list = None
     duty_room_per_day = dict()
-    kitot_konenout = dict()
     first_planning_hour = None
     try:
         while try_num < TRIES_NUMBER:
             user_input, dates_list, delays, wl, duty_room_per_day, \
-                kitot_konenout, guards_list, first_planning_hour = plan(user_input, try_num == 0)
+                guards_list, first_planning_hour = plan(user_input, try_num == 0)
 
             if not min_delays or delays < min_delays:
                 min_delays = delays
@@ -734,7 +731,7 @@ if __name__ == '__main__':
 
     check_guards_slots_delays(best_wl, guards_list, need_print=True)
     export_to_excel(NEW_WATCH_LIST_FILE_NAME, best_wl, GUARD_SPOTS,
-                    duty_room_per_day, kitot_konenout)
+                    duty_room_per_day)
     get_available_guards_per_date(best_wl, guards_list,
                                   NEW_WATCH_LIST_FILE_NAME,
                                   backward_delay=6, forward_delay=6)
