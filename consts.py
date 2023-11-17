@@ -1,7 +1,7 @@
 RANDOMNESS_LEVEL = 2
 MINIMAL_DELAY = 12
 PARTNER_MINIMAL_DELAY = 6
-TRIES_NUMBER = 1
+TRIES_NUMBER = 20
 RETRIES_NUM_BEFORE_CRASH = 20
 
 NEW_WATCH_LIST_FILE_NAME = 'watch_list'
@@ -44,12 +44,6 @@ GUARD_SPOTS = {
         'duration': 8,
         'guard_duration': 4,
         'guards_number': 2,
-    },
-    'נתיבות': {
-        'start': 8,
-        'duration': 24,
-        'guard_duration': 4,
-        'guards_number': 2,
     }
 }
 
@@ -69,12 +63,6 @@ PREVIOUS_GUARD_SPOTS = {
     'סיור': {
         'start': 22,
         'duration': 8,
-        'guard_duration': 4,
-        'guards_number': 2,
-    },
-    'נתיבות': {
-        'start': 8,
-        'duration': 24,
         'guard_duration': 4,
         'guards_number': 2,
     }
