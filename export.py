@@ -78,9 +78,9 @@ def merge_excel_cells(df, worksheet):
             if start_content is None:
                 start_content = content
 
-            elif content != start_content or row_num == len(df) + 1:
+            elif content != start_content:
                 if start_row < row_num - 1:
-                    end_row = row_num - 1 if row_num < len(df) + 1 else row_num
+                    end_row = row_num - 1
                     worksheet.merge_cells(start_row=start_row,
                                           start_column=col_num,
                                           end_row=end_row, end_column=col_num)
@@ -88,6 +88,13 @@ def merge_excel_cells(df, worksheet):
                 if row_num < len(df) + 1:
                     start_row = row_num
                     start_content = content
+
+            elif row_num == len(df) + 1 and content == start_content:
+                if start_row < row_num:
+                    end_row = row_num
+                    worksheet.merge_cells(start_row=start_row,
+                                          start_column=col_num,
+                                          end_row=end_row, end_column=col_num)
 
 
 def is_column_empty(worksheet, column_index):
@@ -114,16 +121,20 @@ def adjust_columns_and_rows(worksheet):
                             end_color='f2f2f2',
                             fill_type='solid')
 
-    for index, col in enumerate(worksheet.columns, start=1):
+    # Adjusting column widths
+    for col in worksheet.columns:
         max_length = 0
         column = [cell for cell in col]
         for cell in column:
             try:
+                # Check if the cell has a value and it's not just whitespace
                 if cell.value and (not isinstance(cell.value, str) or cell.value.strip()):
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
+                    # Find the longest line in the cell
+                    longest_line_length = \
+                        max(len(line) for line in str(cell.value).split('\n'))
+                    max_length = max(max_length, longest_line_length)
                 else:
-                    # Apply grey fill only to empty cells
+                    # Apply grey fill only to empty or whitespace-only cells
                     cell.fill = grey_fill
 
                 # Apply styles to all cells
@@ -131,14 +142,48 @@ def adjust_columns_and_rows(worksheet):
                 cell.alignment = center_aligned_text
                 cell.border = thin_border
             except IllegalCharacterError:
-                # Handle specific openpyxl IllegalCharacterError
                 pass
-            except Exception as e:
-                # You can log the exception if needed
-                print(f"An error occurred: {e}")
 
-        adjusted_width = (max_length + 2)
+        adjusted_width = (max_length + 2)  # Adjust the width
         worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
+
+    # Constants for height calculation
+    line_height = 30  # Adjust this value as needed
+    padding_height = 4  # Additional height to add as padding
+
+    # Adjusting row heights
+    for index, row in enumerate(worksheet.iter_rows()):
+        if index < 1:
+            continue
+
+        max_line_count = 1
+        row_index = row[0].row  # Get the row index from the first cell in the row
+        for cell in row:
+            try:
+                if cell.value and isinstance(cell.value, str) and '\n' in cell.value:
+                    line_count = cell.value.count('\n') + 1
+                    if line_count > max_line_count:
+                        max_line_count = line_count
+            except IllegalCharacterError:
+                pass
+        worksheet.row_dimensions[row_index].height = (max_line_count * line_height) + padding_height
+
+    # Adjusting for merged cells
+    for merged_range in worksheet.merged_cells.ranges:
+        try:
+            first_cell = worksheet[merged_range.min_row][merged_range.min_col - 1]
+            if first_cell.value and isinstance(first_cell.value, str) and '\n' in first_cell.value:
+                line_count = first_cell.value.count('\n') + 1
+                total_height = (line_count * line_height) + padding_height  # Calculate total height
+
+                # Number of rows in the merged cell
+                num_rows = merged_range.max_row - merged_range.min_row + 1
+
+                # Distribute the height evenly across the rows
+                for row in range(merged_range.min_row, merged_range.max_row + 1):
+                    worksheet.row_dimensions[row].height = total_height / num_rows
+        except IllegalCharacterError:
+            pass
 
 
 def format_excel(df, worksheet):
