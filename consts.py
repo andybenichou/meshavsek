@@ -1,6 +1,6 @@
 RANDOMNESS_LEVEL = 2
-MINIMAL_DELAY = 18
-PARTNER_MINIMAL_DELAY = 9
+MINIMAL_DELAY = 6
+PARTNER_MINIMAL_DELAY = 6
 TRIES_NUMBER = 20
 RETRIES_NUM_BEFORE_CRASH = 20
 
@@ -21,7 +21,7 @@ ENGLISH_WEEKDAY_TO_HEBREW = {
 }
 
 FIRST_HOUR_FIRST_DATE = 2
-LAST_HOUR_LAST_DATE = 23
+LAST_HOUR_LAST_DATE = 20
 
 KITAT_KONENOUT_DURATION = 6
 MINIMUM_AVAILABLE_SOLDIERS_KITAT_CONENOUT = 2
@@ -40,8 +40,14 @@ GUARD_SPOTS = {
         'guards_number': 2,
     },
     'סיור': {
-        'start': 22,
-        'duration': 8,
+        'start': 00,
+        'duration': 6,
+        'guard_duration': 3,
+        'guards_number': 2,
+    },
+    'מרחבים': {
+        'start': 7,
+        'duration': 7,
         'guard_duration': 4,
         'guards_number': 2,
     }
@@ -61,7 +67,13 @@ PREVIOUS_GUARD_SPOTS = {
         'guards_number': 2,
     },
     'סיור': {
-        'start': 22,
+        'start': 00,
+        'duration': 6,
+        'guard_duration': 3,
+        'guards_number': 2,
+    },
+    'מרחבים': {
+        'start': 7,
         'duration': 8,
         'guard_duration': 4,
         'guards_number': 2,

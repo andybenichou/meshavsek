@@ -6,8 +6,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, Border, Side, Alignment, PatternFill
 from openpyxl.utils.exceptions import IllegalCharacterError
 
-from consts import TORANOUT_PROPS, GUARD_SPOTS, DAY_COLUMN_NAME, \
-    HOUR_COLUMN_NAME
+from consts import GUARD_SPOTS, DAY_COLUMN_NAME, HOUR_COLUMN_NAME
 
 
 def export_to_CSV(watch_list, guard_spots):
@@ -39,8 +38,7 @@ def parse_date(date: datetime):
 
 
 def get_excel_data_frame(watch_list, guard_spots, duty_room_per_day):
-    columns = [DAY_COLUMN_NAME, HOUR_COLUMN_NAME] + list(guard_spots.keys()) + \
-              [TORANOUT_PROPS['column_name']]
+    columns = [DAY_COLUMN_NAME, HOUR_COLUMN_NAME] + list(guard_spots.keys())
     data = list()
 
     for date in watch_list:

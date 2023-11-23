@@ -119,14 +119,6 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList,
                 elif guard not in missing_guards[date] and is_guard_missing:
                     missing_guards[date].append(guard)
 
-                if row[(next_date, 'עד 12')] == "חפ''ק":
-                    time_obj = {
-                        'start': date.replace(hour=12),
-                        'end': (date + timedelta(days=1)).replace(hour=12)
-                    }
-
-                    guard.add_not_available_time(time_obj['start'], time_obj['end'])
-
     filtered_missing_guards = dict()
     for date, missing in missing_guards.items():
         # If almost all the guards absent, there must be an error in the xlsx file

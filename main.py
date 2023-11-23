@@ -5,6 +5,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from itertools import cycle
 
+from Guard import Guard
 from GuardsList import GuardsList
 from Room import Room
 from consts import TRIES_NUMBER, MINIMAL_DELAY, \
@@ -334,7 +335,8 @@ def get_next_available_guard(guards_list_prop: GuardsList,
                         partner = guards_list_prop.find(partner)
                         if partner.is_available(watch_list, date,
                                                 spot=spot,
-                                                delays_prop=list(range(0, PARTNER_MINIMAL_DELAY + 1, 3)),
+                                                delays_prop=list(range(0,
+                                                                       min(PARTNER_MINIMAL_DELAY, MINIMAL_DELAY) + 1, 3)),
                                                 break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule):
                             same_time_partners.append(partner)
             return chosen_guards
@@ -373,30 +375,31 @@ def get_guards(guards_list_prop: GuardsList, watch_list, date, spot,
         return guards
 
     if fill_guard_spot:
-        guard1, guard2 = get_next_available_guard(guards_list_prop,
+        while len(guards) != GUARD_SPOTS[spot]['guards_number']:
+            guard1, guard2 = get_next_available_guard(guards_list_prop,
+                                                      watch_list,
+                                                      date,
+                                                      next_guards_to_place_when_available,
+                                                      same_time_partners,
+                                                      spot,
+                                                      break_partners,
+                                                      guards=guards)
+
+            for g in [guard1, guard2]:
+                if len(guards) != GUARD_SPOTS[spot]['guards_number'] and g:
+                    guards.append(g)
+
+            if GUARD_SPOTS[spot]['guards_number'] - len(guards) == 1:
+                guard2 = get_next_available_guard(guards_list_prop,
                                                   watch_list,
                                                   date,
                                                   next_guards_to_place_when_available,
                                                   same_time_partners,
                                                   spot,
                                                   break_partners,
-                                                  guards=guards)
-
-        for g in [guard1, guard2]:
-            if len(guards) != GUARD_SPOTS[spot]['guards_number'] and g:
-                guards.append(g)
-
-        if len(guards) == 1 and GUARD_SPOTS[spot]['guards_number'] == 2:
-            guard2 = get_next_available_guard(guards_list_prop,
-                                              watch_list,
-                                              date,
-                                              next_guards_to_place_when_available,
-                                              same_time_partners,
-                                              spot,
-                                              break_partners,
-                                              guards=guards,
-                                              no_duo=True)[0]
-            guards.append(guard2)
+                                                  guards=guards,
+                                                  no_duo=True)[0]
+                guards.append(guard2)
         guards.sort()
 
     return guards
@@ -491,7 +494,10 @@ def get_watch_list_data(guards_list_prop: GuardsList, watch_list, dates,
                                     same_time_partners, break_partners)
 
                 if len(guards) == GUARD_SPOTS[spot]['guards_number'] \
-                        and not watch_list[date][spot]:
+                        and (not watch_list[date][spot] or
+                             (len(watch_list[date][spot]) != GUARD_SPOTS[spot]['guards_number']
+                              and Guard('None', '') not in watch_list[date][spot])) \
+                        and date >= date.now():
                     for g in guards:
                         g.last_spot = spot
                         if g in same_time_partners:
@@ -642,7 +648,7 @@ def get_days_input():
     days_input = input("How many days do you need to schedule? ")
 
     while True:
-        if is_integer(days_input):
+        if is_integer(days_input) and int(days_input) >= -1:
             break
         else:
             days_input = input("Please enter a valid integer. ")
@@ -687,7 +693,7 @@ def plan(user_input_prop, print_unknown_names, retry_after_infinite_loop_num=0,
         watch_list, duty_rooms, \
             rooms, user_i, dates, first_hour, _ = init(guards, print_unknown_names,
                                                        user_input_prop)
-        complete_duty_rooms(duty_rooms, dates, rooms, first_hour)
+        # complete_duty_rooms(duty_rooms, dates, rooms, first_hour)
         if user_i != -1:
             watch_list = get_watch_list_data(guards, watch_list, dates, first_hour,
                                              break_partners)
@@ -713,7 +719,7 @@ if __name__ == '__main__':
     try:
         while try_num < TRIES_NUMBER:
             user_input, dates_list, delays, wl, duty_room_per_day, \
-                guards_list, first_planning_hour = plan(user_input, try_num == 0)
+                guards_list, first_planning_hour = plan(user_input, print_unknown_names=try_num == 0)
 
             if not min_delays or delays < min_delays:
                 min_delays = delays
@@ -736,6 +742,6 @@ if __name__ == '__main__':
                     duty_room_per_day)
     get_available_guards_per_date(best_wl, guards_list,
                                   NEW_WATCH_LIST_FILE_NAME,
-                                  backward_delay=6, forward_delay=6)
+                                  backward_delay=3, forward_delay=6)
 
     print('\nShivsakta!')

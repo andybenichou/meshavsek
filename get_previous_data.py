@@ -14,9 +14,7 @@ from helper import find_guard_slot
 
 
 def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
-                guards_spot, print_missing_names=True):
-    missing_names = list()
-
+                guards_spot, missing_names):
     slot = find_guard_slot(guards_spot, date, spot)
 
     # First hour of the slot
@@ -33,7 +31,8 @@ def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
                     guards_list.remove(guard)
                     guards_list.append(guard)
 
-            elif stripped_g and stripped_g not in missing_names:
+            elif stripped_g and stripped_g not in missing_names \
+                    and stripped_g != 'None':
                 missing_names.append(stripped_g)
 
         guards = list()
@@ -52,16 +51,6 @@ def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
 
         if guards_slot:
             return guards_slot
-
-    if print_missing_names:
-        if missing_names:
-            print('\nNot known guards in previous guards file:')
-
-        for name in missing_names:
-            print(name)
-
-        if missing_names:
-            print()
 
     if pd.notna(row[spot]):
         return row[spot]
@@ -137,6 +126,8 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
                                                       TORANOUT_PROPS['column_name'],
                                                       KITOT_KONENOUT_PROPS['column_name']],
                               df.columns))
+
+    missing_names = list()
     # last_kitat_konenout_duration = 0
     # last_kitat_konenout = None
     for index, row in df.iterrows():
@@ -151,8 +142,8 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
 
         date = date.replace(hour=hour)
 
-        duty_room = get_duty_room(row, duty_room, date, rooms)
-        duty_rooms[date] = duty_room
+        # duty_room = get_duty_room(row, duty_room, date, rooms)
+        # duty_rooms[date] = duty_room
 
         # kitat_konenout = get_kitat_konenout(row, last_kitat_konenout, last_kitat_konenout_duration)
         # if kitat_konenout == last_kitat_konenout:
@@ -165,8 +156,17 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
 
         for spot in guard_spots:
             guards = find_guards(watch_list, guards_list, date, spot, row,
-                                 PREVIOUS_GUARD_SPOTS,
-                                 print_missing_names=print_unknown_names)
+                                 PREVIOUS_GUARD_SPOTS, missing_names)
             watch_list[date][spot] = guards
+
+    if print_unknown_names:
+        if missing_names:
+            print('\nNot known guards in previous guards file:')
+
+        for name in missing_names:
+            print(name)
+
+        if missing_names:
+            print()
 
     return watch_list, duty_rooms
