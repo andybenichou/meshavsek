@@ -17,7 +17,7 @@ GUARDS_LIST = GuardsList(
                'end': datetime(year=2023, month=11, day=24, hour=23),
            }]),
      Guard('יואל', 'אודיז', partner='ארד רז'),
-     Guard('ארד', 'רז', partner='יואל אודיז'),
+     Guard('ארד', 'רז', partner='יואל אודיז', is_living_far_away=True),
      Guard('ליאור', 'אבו חמדה', is_living_far_away=True,
            spots_preferences=['ש.ג.'],
            not_available_times=[{

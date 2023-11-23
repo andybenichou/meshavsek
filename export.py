@@ -37,28 +37,51 @@ def parse_date(date: datetime):
     return date.date()
 
 
+def get_row(watch_list, date, duty_room_per_day):
+    time_for_excel = f'{date.hour:02d}:00'  # formatted for Excel
+    row = [parse_date(date), time_for_excel]
+
+    for spot in GUARD_SPOTS:
+        guards_str = '\n'.join(
+            [str(g) for g in watch_list[date][spot]]) \
+            if watch_list[date][spot] else ' '
+
+        row.append(guards_str)
+
+
+    if date in duty_room_per_day:
+        if duty_room_per_day[date]:
+            row.append(f'{duty_room_per_day[date].number} חדר')
+        else:
+            row.append(' ')
+
+    return row
+
+
+def get_limit_dates(watch_list, duty_room_per_day):
+    first_date = None
+    last_date = None
+    for date in watch_list:
+        row = get_row(watch_list, date, duty_room_per_day)
+
+        if not is_row_empty(row):
+            last_date = date
+
+            if not first_date:
+                first_date = date
+
+    return first_date, last_date
+
+
 def get_excel_data_frame(watch_list, guard_spots, duty_room_per_day):
+    first_date, last_date = get_limit_dates(watch_list, duty_room_per_day)
     columns = [DAY_COLUMN_NAME, HOUR_COLUMN_NAME] + list(guard_spots.keys())
     data = list()
 
     for date in watch_list:
-        time_for_excel = f'{date.hour:02d}:00'  # formatted for Excel
-        row = [parse_date(date), time_for_excel]
+        row = get_row(watch_list, date, duty_room_per_day)
 
-        for spot in GUARD_SPOTS:
-            guards_str = '\n'.join(
-                [str(g) for g in watch_list[date][spot]]) \
-                if watch_list[date][spot] else ' '
-
-            row.append(guards_str)
-
-        if date in duty_room_per_day:
-            if duty_room_per_day[date]:
-                row.append(f'{duty_room_per_day[date].number} חדר')
-            else:
-                row.append(' ')
-
-        if not is_row_empty(row):
+        if first_date <= date <= last_date:
             data.append(row)
 
     return pd.DataFrame(data, columns=columns)

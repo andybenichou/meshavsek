@@ -111,6 +111,24 @@ class Guard:
                 return True
         return False
 
+    def is_missing_during_spot(self, spot, date):
+        if spot:
+            guard_slot = find_guard_slot(GUARD_SPOTS, date, spot)
+            if guard_slot:
+                for missing_times in self.not_available_times:
+                    # Leaves before the beginning
+                    if missing_times['start'] <= guard_slot['start']:
+                        # Comes back after the beginning
+                        if missing_times['end'] >= guard_slot['start']:
+                            return True
+
+                    # Leaves after the beginning
+                    if missing_times['start'] >= guard_slot['start']:
+                        # But before the end
+                        if missing_times['start'] <= guard_slot['end']:
+                            return True
+        return False
+
     def in_time_preferences(self, date: datetime):
         if self.time_preferences:
             in_time_preferences = False
@@ -128,23 +146,6 @@ class Guard:
                      delays_prop=None,
                      break_no_same_consecutive_spot_rule=False,
                      not_missing_delay=0, curr_guards=None):
-        def is_missing_during_spot():
-            if spot:
-                guard_slot = find_guard_slot(GUARD_SPOTS, date, spot)
-                if guard_slot:
-                    for missing_times in self.not_available_times:
-                        # Leaves before the beginning
-                        if missing_times['start'] <= guard_slot['start']:
-                            # Comes back after the beginning
-                            if missing_times['end'] >= guard_slot['start']:
-                                return True
-
-                        # Leaves after the beginning
-                        if missing_times['start'] >= guard_slot['start']:
-                            # But before the end
-                            if missing_times['start'] <= guard_slot['end']:
-                                return True
-            return False
 
         if not self.is_guarding:
             return False
@@ -158,7 +159,7 @@ class Guard:
             if self.is_missing(new_date):
                 return False
 
-        if is_missing_during_spot():
+        if self.is_missing_during_spot(spot, date):
             return False
 
         if spot and self.last_spot == spot and not \
