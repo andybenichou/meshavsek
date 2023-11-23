@@ -44,9 +44,14 @@ def find_guard_slot(guards_spot, date: datetime, spot):
     hour = date.hour
 
     while duration < guard_spot['duration']:
-        slot_start_hour, slot_end_hour = t, (t + guard_spot['guard_duration']) % 24
-        t = (t + guard_spot['guard_duration']) % 24
-        duration += guard_spot['guard_duration']
+        guard_duration = 0
+        while duration < guard_spot['duration'] and \
+                guard_duration < guard_spot['guard_duration']:
+            guard_duration += 1
+            duration += 1
+
+        slot_start_hour, slot_end_hour = t, (t + guard_duration) % 24
+        t = slot_end_hour
 
         if slot_end_hour < slot_start_hour:
             slot_end_hour += 24

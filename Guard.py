@@ -195,5 +195,6 @@ class Guard:
 
         return guards_list.find(self.partner).is_available(watch_list, date,
                                                            spot=spot,
-                                                           delays_prop=list(range(0, PARTNER_MINIMAL_DELAY + 1, 3)),
+                                                           delays_prop=list(range(0,
+                                                                                  min(PARTNER_MINIMAL_DELAY, MINIMAL_DELAY) + 1, 3)),
                                                            break_no_same_consecutive_spot_rule=break_no_same_consecutive_spot_rule)

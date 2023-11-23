@@ -8,9 +8,13 @@ from consts import GUARD_SPOTS
 GUARDS_LIST = GuardsList(
     [Guard('משה', 'החופל', is_guarding=False,
            spots_preferences=['בטונדות'],
-           time_preferences=[{
-               'start': 5,
-               'end': 8,
+           not_available_times=[{
+               'start': datetime(year=2023, month=11, day=23, hour=10),
+               'end': datetime(year=2023, month=11, day=23, hour=23),
+           },
+           {
+               'start': datetime(year=2023, month=11, day=24, hour=2),
+               'end': datetime(year=2023, month=11, day=24, hour=23),
            }]),
      Guard('יואל', 'אודיז', partner='ארד רז'),
      Guard('ארד', 'רז', partner='יואל אודיז'),
@@ -82,13 +86,18 @@ GUARDS_LIST = GuardsList(
      Guard('מאור', 'ניקחה', is_guarding=False),
      Guard('רועי', 'קלפסקי', is_guarding=False),
      Guard('בן', 'בנימין'),
-     Guard('איתמר', 'בנימין'),
+     Guard('איתמר', 'בנימין', is_living_far_away=True,
+           not_available_times=[{
+               'start': datetime(year=2023, month=11, day=24, hour=6),
+               'end': datetime(year=2023, month=11, day=24, hour=23),
+           }]),
      Guard('גיל', 'אורון', is_guarding=False),
      Guard('פביאן', 'חויוס'),
      Guard('חן', 'טלה'),
      Guard('יניב', 'משה'),
      Guard('זיטר', 'יצחק'),
      Guard('ראובן', 'מאור'),
+     Guard('אלקנה', 'שפנגנטל'),
      ])
 
 # List of missing guards each date (not in use)
