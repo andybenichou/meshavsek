@@ -1,3 +1,4 @@
 *.pyc
 config.py
 guards_config.py
+data/*
