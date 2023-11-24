@@ -4,22 +4,21 @@ from collections import defaultdict
 
 import pandas as pd
 
-from Guard import Guard
-from GuardsList import GuardsList
-from Room import Room
-from consts import TORANOUT_PROPS, \
-    DAY_COLUMN_NAME, HOUR_COLUMN_NAME, KITOT_KONENOUT_PROPS, \
+from config import DAY_COLUMN_NAME, HOUR_COLUMN_NAME
+from guards_config import KITOT_KONENOUT_PROPS, TORANOUT_PROPS, \
     PREVIOUS_GUARD_SPOTS
-from helper import find_guard_slot
+from src.models.Guard import Guard
+from src.models.GuardsList import GuardsList
+from src.models.Room import Room
 
 
 def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
-                guards_spot, missing_names):
-    slot = find_guard_slot(guards_spot, date, spot)
+                missing_names):
+    slot = spot.find_guard_slot(date)
 
     # First hour of the slot
-    if pd.notna(row[spot]):
-        found_guards = row[spot].split('\n')
+    if pd.notna(row[spot.name]):
+        found_guards = row[spot.name].split('\n')
 
         for g in found_guards:
             stripped_g = g.strip()
@@ -36,7 +35,7 @@ def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
                 missing_names.append(stripped_g)
 
         guards = list()
-        for g in row[spot].split('\n'):
+        for g in row[spot.name].split('\n'):
             found_g = guards_list.find(g.strip())
             if found_g:
                 guards.append(found_g)
@@ -52,14 +51,20 @@ def find_guards(watch_list, guards_list: GuardsList, date, spot, row,
         if guards_slot:
             return guards_slot
 
-    if pd.notna(row[spot]):
-        return row[spot]
+    if pd.notna(row[spot.name]):
+        return row[spot.name]
 
     return GuardsList()
 
 
 def get_kitat_konenout(row, last_kitat_konenout, last_kitat_konenout_duration):
-    kitat_konenout = row[KITOT_KONENOUT_PROPS['column_name']]
+    if KITOT_KONENOUT_PROPS['column_name'] not in row:
+        if last_kitat_konenout:
+            kitat_konenout = last_kitat_konenout
+        else:
+            return None
+    else:
+        kitat_konenout = row[KITOT_KONENOUT_PROPS['column_name']]
 
     if pd.notna(kitat_konenout):
         # Search for the pattern: the word "חדר" followed by a space and one or more digits
@@ -76,7 +81,8 @@ def get_kitat_konenout(row, last_kitat_konenout, last_kitat_konenout_duration):
 
 
 def get_duty_room(row, last_duty_room, date, rooms):
-    if not TORANOUT_PROPS['start'] <= date.hour < TORANOUT_PROPS['end']:
+    if not TORANOUT_PROPS['start'] <= date.hour < TORANOUT_PROPS['end'] \
+            or TORANOUT_PROPS['column_name'] not in row:
         return None
 
     duty_room = row[TORANOUT_PROPS['column_name']]
@@ -103,15 +109,16 @@ def parse_date(row):
 def get_previous_data(file_name, watch_list, guards_list: GuardsList,
                       rooms: [Room], print_unknown_names=True):
     # Load the spreadsheet
-    file_path = f'{file_name}.xlsx'
-    src_previous_dir = os.path.dirname(os.path.abspath(__file__))
-    previous_dir = os.path.join(src_previous_dir, file_path)
+    file_path = f'data/input/{file_name}.xlsx'
+
+    ROOT_DIR = os.environ.get('ROOT_DIR')
+    full_path = os.path.join(ROOT_DIR, file_path)
 
     duty_rooms = defaultdict(int)
-    # kitot_konenout = defaultdict(int)
+    kitot_konenout = defaultdict(int)
 
-    if not os.path.exists(previous_dir):
-        return watch_list, duty_rooms
+    if not os.path.exists(full_path):
+        return watch_list, duty_rooms, kitot_konenout
 
     xl = pd.ExcelFile(file_path)
 
@@ -128,8 +135,8 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
                               df.columns))
 
     missing_names = list()
-    # last_kitat_konenout_duration = 0
-    # last_kitat_konenout = None
+    last_kitat_konenout_duration = 0
+    last_kitat_konenout = None
     for index, row in df.iterrows():
         buff_date = parse_date(row)
         if date is None or buff_date != date and buff_date:
@@ -142,22 +149,23 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
 
         date = date.replace(hour=hour)
 
-        # duty_room = get_duty_room(row, duty_room, date, rooms)
-        # duty_rooms[date] = duty_room
+        duty_room = get_duty_room(row, duty_room, date, rooms)
+        duty_rooms[date] = duty_room
 
-        # kitat_konenout = get_kitat_konenout(row, last_kitat_konenout, last_kitat_konenout_duration)
-        # if kitat_konenout == last_kitat_konenout:
-        #     last_kitat_konenout_duration += 1
-        # else:
-        #     last_kitat_konenout_duration = 1
-        #     last_kitat_konenout = kitat_konenout
-        #
-        # kitot_konenout[date] = kitat_konenout if kitat_konenout is not None else ''
+        kitat_konenout = get_kitat_konenout(row, last_kitat_konenout, last_kitat_konenout_duration)
+        if kitat_konenout == last_kitat_konenout:
+            last_kitat_konenout_duration += 1
+        else:
+            last_kitat_konenout_duration = 1
+            last_kitat_konenout = kitat_konenout
+
+        kitot_konenout[date] = kitat_konenout if kitat_konenout is not None else ''
 
         for spot in guard_spots:
-            guards = find_guards(watch_list, guards_list, date, spot, row,
-                                 PREVIOUS_GUARD_SPOTS, missing_names)
-            watch_list[date][spot] = guards
+            spot_obj = list(filter(lambda s: s.name == spot, PREVIOUS_GUARD_SPOTS))[0]
+            guards = find_guards(watch_list, guards_list, date, spot_obj, row,
+                                 missing_names)
+            watch_list[date][spot_obj] = guards
 
     if print_unknown_names:
         if missing_names:
@@ -169,4 +177,4 @@ def get_previous_data(file_name, watch_list, guards_list: GuardsList,
         if missing_names:
             print()
 
-    return watch_list, duty_rooms
+    return watch_list, duty_rooms, kitot_konenout

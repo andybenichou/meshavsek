@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 from copy import deepcopy
 
-from consts import MINIMAL_DELAY, GUARD_SPOTS, PARTNER_MINIMAL_DELAY
-from helper import find_guard_slot
+from config import MINIMAL_DELAY, PARTNER_MINIMAL_DELAY
+from src.models.Spot import Spot
 
 
 class Guard:
@@ -113,7 +113,7 @@ class Guard:
 
     def is_missing_during_spot(self, spot, date):
         if spot:
-            guard_slot = find_guard_slot(GUARD_SPOTS, date, spot)
+            guard_slot = spot.find_guard_slot(date)
             if guard_slot:
                 for missing_times in self.not_available_times:
                     # Leaves before the beginning
@@ -142,7 +142,7 @@ class Guard:
         return True
 
     # Helper function to check if a guard is available
-    def is_available(self, watch_list, date, spot=None,
+    def is_available(self, watch_list, date, spot: Spot = None,
                      delays_prop=None,
                      break_no_same_consecutive_spot_rule=False,
                      not_missing_delay=0, curr_guards=None):
@@ -183,8 +183,8 @@ class Guard:
                 continue
 
             # Check if the guard already in another spot
-            for spot_name in watch_list[updated_date]:
-                if self in watch_list[updated_date][spot_name]:
+            for spot_obj in watch_list[updated_date]:
+                if self in watch_list[updated_date][spot_obj]:
                     return False
 
         return True

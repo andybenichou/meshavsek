@@ -1,7 +1,7 @@
 from datetime import datetime
 from functools import reduce
 
-from GuardsList import GuardsList
+from src.models.GuardsList import GuardsList
 
 
 class Room:

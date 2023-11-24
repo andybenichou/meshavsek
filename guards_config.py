@@ -1,9 +1,61 @@
 from datetime import datetime
 
-from Guard import Guard
-from GuardsList import GuardsList
+from src.models.Guard import Guard
+from src.models.GuardsList import GuardsList
+from src.models.Spot import Spot, get_all_week_guard_spot
 
-from consts import GUARD_SPOTS
+# Spot names on the output files
+GUARD_SPOTS = [
+    Spot('ש.ג.', guard_duration=3, guards_number=2,
+         guard_times=get_all_week_guard_spot(start=2)),
+    Spot('בטונדות', guard_duration=3, guards_number=2,
+         guard_times=get_all_week_guard_spot(start=2)),
+    Spot('סיור', guard_duration=3, guards_number=2,
+         guard_times=get_all_week_guard_spot(start=0, duration=6)),
+    Spot('מרחבים', guard_duration=4, guards_number=2,
+         guard_times={
+             'א': {'start': 7, 'duration': 7},
+             'ב': {'start': 7, 'duration': 7},
+             'ג': {'start': 7, 'duration': 7},
+             'ד': {'start': 7, 'duration': 7},
+             'ה': {'start': 7, 'duration': 7},
+         })
+]
+
+# Use to define the spots names on the input file
+PREVIOUS_GUARD_SPOTS = [
+    Spot('ש.ג.', guard_duration=3, guards_number=2,
+         guard_times=get_all_week_guard_spot(start=2)),
+    Spot('בטונדות', guard_duration=3, guards_number=2,
+         guard_times=get_all_week_guard_spot(start=2)),
+    Spot('סיור', guard_duration=3, guards_number=2,
+         guard_times=get_all_week_guard_spot(start=0, duration=6)),
+    Spot('מרחבים', guard_duration=4, guards_number=2,
+         guard_times={
+             'א': {'start': 7, 'duration': 7},
+             'ב': {'start': 7, 'duration': 7},
+             'ג': {'start': 7, 'duration': 7},
+             'ד': {'start': 7, 'duration': 7},
+             'ה': {'start': 7, 'duration': 7},
+             'ו': {'start': 7, 'duration': 7},
+         })
+]
+
+TORANOUT_PROPS = {
+    'is_needed': False,
+    'column_name': 'תורנות',
+    'start': 10,
+    'end': 20,
+}
+
+KITOT_KONENOUT_PROPS = {
+    'is_needed': False,
+    'column_name': 'כתת כוננות',
+    'start': None,
+    'end': None,
+    'duration': 6,
+    'minimum_available_soldiers': 2,
+}
 
 GUARDS_LIST = GuardsList(
     [Guard('משה', 'החופל', is_guarding=False,
@@ -78,7 +130,7 @@ GUARDS_LIST = GuardsList(
      Guard('לוטם', 'עטיה', not_partners=['אסף זבולון']),
      Guard('אור', 'נצקנסקי',
            spots_preferences=list(filter(lambda spot: spot != 'ש.ג.',
-                                         GUARD_SPOTS.keys()))),
+                                         GUARD_SPOTS))),
      Guard('מרדוש', 'דהן', is_living_far_away=True),
      Guard('בן', 'עידה', is_guarding=False),
      Guard('נח', 'טואטי', is_guarding=False),
@@ -100,7 +152,7 @@ GUARDS_LIST = GuardsList(
      Guard('אלקנה', 'שפנגנטל'),
      ])
 
-# List of missing guards each date (not in use)
+# List of missing guards each date (in use only if no missing guards input file)
 MISSING_GUARDS = {}
 
 ROOMS_LIST = [

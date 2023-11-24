@@ -4,9 +4,9 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-from GuardsList import GuardsList
-from guards_properties import MISSING_GUARDS
-from helper import get_next_dates, get_day_of_week, get_day_at_midnight
+from guards_config import MISSING_GUARDS
+from src.models.GuardsList import GuardsList
+from src.utils.helper import get_next_dates, get_day_of_week, get_day_at_midnight
 
 
 def complete_each_guard_missing_slots(missing_guards):
@@ -37,11 +37,11 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList,
         pattern = r'^\d{1,2}-\d{1,2}$'
         return bool(re.match(pattern, time_range))
 
-    file_path = f'{file_name}.xlsx'
-    src_missing_dir = os.path.dirname(os.path.abspath(__file__))
-    missing_dir = os.path.join(src_missing_dir, file_path)
+    file_path = f'data/input/{file_name}.xlsx'
+    ROOT_DIR = os.environ.get('ROOT_DIR')
+    full_path = os.path.join(ROOT_DIR, file_path)
 
-    if not os.path.exists(missing_dir):
+    if not os.path.exists(full_path):
         missing_guards = MISSING_GUARDS
         complete_each_guard_missing_slots(missing_guards)
         return missing_guards

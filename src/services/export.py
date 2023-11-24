@@ -1,4 +1,5 @@
 import csv
+import os
 from datetime import datetime
 
 import pandas as pd
@@ -6,7 +7,8 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, Border, Side, Alignment, PatternFill
 from openpyxl.utils.exceptions import IllegalCharacterError
 
-from consts import GUARD_SPOTS, DAY_COLUMN_NAME, HOUR_COLUMN_NAME
+from config import DAY_COLUMN_NAME, HOUR_COLUMN_NAME
+from guards_config import KITOT_KONENOUT_PROPS, TORANOUT_PROPS
 
 
 def export_to_CSV(watch_list, guard_spots):
@@ -37,32 +39,44 @@ def parse_date(date: datetime):
     return date.date()
 
 
-def get_row(watch_list, date, duty_room_per_day):
+def get_row(watch_list, guard_spots, date, duty_room_per_day, kitot_konenout):
     time_for_excel = f'{date.hour:02d}:00'  # formatted for Excel
     row = [parse_date(date), time_for_excel]
 
-    for spot in GUARD_SPOTS:
+    for spot in guard_spots:
         guards_str = '\n'.join(
             [str(g) for g in watch_list[date][spot]]) \
             if watch_list[date][spot] else ' '
 
         row.append(guards_str)
 
-
-    if date in duty_room_per_day:
-        if duty_room_per_day[date]:
-            row.append(f'{duty_room_per_day[date].number} חדר')
-        else:
-            row.append(' ')
+    for spot in [KITOT_KONENOUT_PROPS['column_name'], TORANOUT_PROPS['column_name']]:
+        if KITOT_KONENOUT_PROPS['is_needed']:
+            if spot == KITOT_KONENOUT_PROPS['column_name'] \
+                    and date in kitot_konenout \
+                    and kitot_konenout[date] is not None:
+                if kitot_konenout[date]:
+                    row.append(f'{kitot_konenout[date]} חדר')
+                else:
+                    row.append(' ')
+        if TORANOUT_PROPS['is_needed']:
+            if spot == TORANOUT_PROPS['column_name'] \
+                    and date in duty_room_per_day:
+                if duty_room_per_day[date]:
+                    row.append(f'{duty_room_per_day[date].number} חדר')
+                else:
+                    row.append(' ')
 
     return row
 
 
-def get_limit_dates(watch_list, duty_room_per_day):
+def get_limit_dates(watch_list, guard_spots, duty_room_per_day,
+                    kitot_konenout):
     first_date = None
     last_date = None
     for date in watch_list:
-        row = get_row(watch_list, date, duty_room_per_day)
+        row = get_row(watch_list, guard_spots, date, duty_room_per_day,
+                      kitot_konenout)
 
         if not is_row_empty(row):
             last_date = date
@@ -73,18 +87,32 @@ def get_limit_dates(watch_list, duty_room_per_day):
     return first_date, last_date
 
 
-def get_excel_data_frame(watch_list, guard_spots, duty_room_per_day):
-    first_date, last_date = get_limit_dates(watch_list, duty_room_per_day)
-    columns = [DAY_COLUMN_NAME, HOUR_COLUMN_NAME] + list(guard_spots.keys())
+def get_excel_data_frame(watch_list, guard_spots, duty_room_per_day,
+                         kitot_konenout):
+    first_date, last_date = get_limit_dates(watch_list, guard_spots,
+                                            duty_room_per_day,
+                                            kitot_konenout)
+    columns = [DAY_COLUMN_NAME, HOUR_COLUMN_NAME]
+
+    for spot in guard_spots:
+        columns.append(spot.name)
+
+    if KITOT_KONENOUT_PROPS['is_needed']:
+        columns += KITOT_KONENOUT_PROPS['column_name']
+
+    if TORANOUT_PROPS['is_needed']:
+        columns += TORANOUT_PROPS['column_name']
+
     data = list()
 
     for date in watch_list:
-        row = get_row(watch_list, date, duty_room_per_day)
+        row = get_row(watch_list, guard_spots, date, duty_room_per_day,
+                      kitot_konenout)
 
         if first_date <= date <= last_date:
             data.append(row)
 
-    return pd.DataFrame(data, columns=columns)
+    return remove_empty_columns(pd.DataFrame(data, columns=columns))
 
 
 def merge_excel_cells(df, worksheet):
@@ -207,19 +235,39 @@ def adjust_columns_and_rows(worksheet):
             pass
 
 
+def remove_empty_columns(df):
+    columns_to_remove = []
+
+    for column_name in df.columns:
+        if df[column_name].dtype == 'object':  # Check if the column contains object (usually string) data
+            is_empty = all(df[column_name].astype(str).str.strip().eq(''))  # Convert to string and then check if all string values are empty
+
+            if is_empty:
+                columns_to_remove.append(column_name)
+
+    # Remove the empty columns from the DataFrame
+    df.drop(columns=columns_to_remove, inplace=True)
+    return df
+
+
 def format_excel(df, worksheet):
     merge_excel_cells(df, worksheet)
     adjust_columns_and_rows(worksheet)
 
 
-def export_to_excel(file_name, watch_list, guard_spots, duty_room_per_day):
-    df = get_excel_data_frame(watch_list, guard_spots, duty_room_per_day)
+def export_to_excel(file_name, watch_list, guard_spots, duty_room_per_day,
+                    kitot_konenout):
+    df = get_excel_data_frame(watch_list, guard_spots, duty_room_per_day,
+                              kitot_konenout)
 
     # Save to Excel
-    excel_path = f'{file_name}.xlsx'
-    df.to_excel(excel_path, index=False, sheet_name='שבצ״כ')
+    excel_path = f'data/output/{file_name}.xlsx'
+    ROOT_DIR = os.environ.get('ROOT_DIR')
+    full_path = os.path.join(ROOT_DIR, excel_path)
 
-    workbook = load_workbook(filename=excel_path)
+    df.to_excel(full_path, index=False, sheet_name='שבצ״כ')
+
+    workbook = load_workbook(filename=full_path)
     worksheet = workbook.active
 
     format_excel(df, worksheet)

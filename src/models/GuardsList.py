@@ -1,7 +1,7 @@
 from copy import deepcopy
 from typing import Union
 
-from Guard import Guard
+from src.models.Guard import Guard
 
 
 class GuardsList:

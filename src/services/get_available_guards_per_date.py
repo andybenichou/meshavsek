@@ -4,10 +4,10 @@ from collections import defaultdict
 import pandas as pd
 from openpyxl import load_workbook
 
-from GuardsList import GuardsList
-from consts import DAY_COLUMN_NAME, HOUR_COLUMN_NAME, \
-    AVAILABLE_GUARDS_COLUMN_NAME, AVAILABLE_GUARDS_SHEET_NAME
-from export import parse_date, is_row_empty, format_excel
+from config import DAY_COLUMN_NAME, AVAILABLE_GUARDS_COLUMN_NAME, \
+    HOUR_COLUMN_NAME, AVAILABLE_GUARDS_SHEET_NAME
+from src.models.GuardsList import GuardsList
+from src.services.export import parse_date, is_row_empty, format_excel
 
 
 def format_to_excel_data_frame(available_guards_per_date):
@@ -41,7 +41,7 @@ def export_to_excel(file_name, available_guards_per_date):
     df = format_to_excel_data_frame(available_guards_per_date)
 
     # Define the Excel file path
-    excel_path = f'{file_name}.xlsx'
+    excel_path = f'data/output/{file_name}.xlsx'
 
     # Check if the Excel file exists
     if os.path.exists(excel_path):
