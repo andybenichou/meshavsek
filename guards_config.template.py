@@ -7,35 +7,35 @@ from src.models.Spot import Spot, get_all_week_guard_spot
 # Spot names on the output files
 GUARD_SPOTS = [
     Spot('Spot 1', guard_duration=3, guards_number=2,
-        guard_times=get_all_week_guard_spot(start=2)),
+         guard_times=get_all_week_guard_spot(start=2)),
     Spot('Spot 2', guard_duration=3, guards_number=2,
-        guard_times=get_all_week_guard_spot(start=2)),
+         guard_times=get_all_week_guard_spot(start=2)),
     Spot('Spot 3', guard_duration=4, guards_number=2,
-        guard_times={
-            'א': {'start': 7, 'duration': 7},
-            'ב': {'start': 10, 'duration': 7},
-            'ג': {'start': 7, 'duration': 7},
-            'ד': {'start': 7, 'duration': 7},
-            'ה': {'start': 4, 'duration': 7},
-        })
+         guard_times={
+             'א': {'start': 7, 'duration': 7},
+             'ב': {'start': 10, 'duration': 7},
+             'ג': {'start': 7, 'duration': 7},
+             'ד': {'start': 7, 'duration': 7},
+             'ה': {'start': 4, 'duration': 7},
+         })
 ]
 
 # Use to define the spots names on the input file
 PREVIOUS_GUARD_SPOTS = [
     Spot('Spot 1', guard_duration=3, guards_number=2,
-        guard_times=get_all_week_guard_spot(start=2)),
+         guard_times=get_all_week_guard_spot(start=2)),
     Spot('Spot 2', guard_duration=3, guards_number=2,
-        guard_times=get_all_week_guard_spot(start=2)),
+         guard_times=get_all_week_guard_spot(start=2)),
     Spot('Spot 3', guard_duration=4, guards_number=2,
-        guard_times={
-            'א': {'start': 7, 'duration': 7},
-            'ב': {'start': 7, 'duration': 7},
-            'ג': {'start': 7, 'duration': 7},
-            'ד': {'start': 7, 'duration': 7},
-            'ה': {'start': 7, 'duration': 7},
-        }),
+         guard_times={
+             'א': {'start': 7, 'duration': 7},
+             'ב': {'start': 7, 'duration': 7},
+             'ג': {'start': 7, 'duration': 7},
+             'ד': {'start': 7, 'duration': 7},
+             'ה': {'start': 7, 'duration': 7},
+         }),
     Spot('Spot 3', guard_duration=3, guards_number=2,
-        guard_times=get_all_week_guard_spot(start=0, duration=6)),
+         guard_times=get_all_week_guard_spot(start=0, duration=6)),
 ]
 
 TORANOUT_PROPS = {
@@ -58,13 +58,13 @@ GUARDS_LIST = GuardsList(
     [Guard('Guard', '1',
            spots_preferences=['Spot 1'],
            not_available_times=[{
-               'start': datetime(year=2023, month=11, day=23, hour=10),
-               'end': datetime(year=2023, month=11, day=23, hour=23),
-           },
-           {
-               'start': datetime(year=2023, month=11, day=24, hour=2),
-               'end': datetime(year=2023, month=11, day=24, hour=23),
-           }]),
+                   'start': datetime(year=2023, month=11, day=23, hour=10),
+                   'end': datetime(year=2023, month=11, day=23, hour=23),
+                },
+               {
+                   'start': datetime(year=2023, month=11, day=24, hour=2),
+                   'end': datetime(year=2023, month=11, day=24, hour=23),
+               }]),
      Guard('Guard', '2', partner='Guard 3'),
      Guard('Guard', '3', partner='Guard 2', is_living_far_away=True),
      Guard('Guard', '4'),
