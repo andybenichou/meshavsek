@@ -6,11 +6,11 @@ from src.models.Spot import Spot, get_all_week_guard_spot
 
 # Spot names on the output files
 GUARD_SPOTS = [
-    Spot('Spot 1', guard_duration=3, guards_number=2,
+    Spot('עמדה 1', guard_duration=3, guards_number=2,
          guard_times=get_all_week_guard_spot(start=2)),
-    Spot('Spot 2', guard_duration=3, guards_number=2,
+    Spot('עמדה 2', guard_duration=3, guards_number=2,
          guard_times=get_all_week_guard_spot(start=2)),
-    Spot('Spot 3', guard_duration=4, guards_number=2,
+    Spot('עמדה 3', guard_duration=4, guards_number=2,
          guard_times={
              'א': {'start': 7, 'duration': 7},
              'ב': {'start': 10, 'duration': 7},
@@ -22,20 +22,20 @@ GUARD_SPOTS = [
 
 # Use to define the spots names on the input file
 PREVIOUS_GUARD_SPOTS = [
-    Spot('Spot 1', guard_duration=3, guards_number=2,
+    Spot('עמדה 1', guard_duration=3, guards_number=2,
          guard_times=get_all_week_guard_spot(start=2)),
-    Spot('Spot 2', guard_duration=3, guards_number=2,
+    Spot('עמדה 2', guard_duration=3, guards_number=2,
          guard_times=get_all_week_guard_spot(start=2)),
-    Spot('Spot 3', guard_duration=4, guards_number=2,
+    Spot('עמדה 3', guard_duration=3, guards_number=2,
          guard_times={
-             'א': {'start': 7, 'duration': 10},
-             'ב': {'start': 7, 'duration': 10},
-             'ג': {'start': 7, 'duration': 10},
-             'ד': {'start': 7, 'duration': 10},
-             'ה': {'start': 7, 'duration': 10},
+             'א': {'start': 8, 'duration': 9},
+             'ב': {'start': 8, 'duration': 9},
+             'ג': {'start': 8, 'duration': 9},
+             'ד': {'start': 8, 'duration': 9},
+             'ה': {'start': 8, 'duration': 9},
          }),
-    Spot('Spot 3', guard_duration=3, guards_number=2,
-         guard_times=get_all_week_guard_spot(start=0, duration=6)),
+    Spot('עמדה 3', guard_duration=3, guards_number=2,
+         guard_times=get_all_week_guard_spot(start=10, duration=6)),
 ]
 
 TORANOUT_PROPS = {
@@ -55,8 +55,8 @@ KITOT_KONENOUT_PROPS = {
 }
 
 GUARDS_LIST = GuardsList(
-    [Guard('Guard', '1',
-           spots_preferences=['Spot 1'],
+    [Guard('שומר', '1',
+           spots_preferences=['עמדה 1'],
            not_available_times=[{
                    'start': datetime(year=2023, month=11, day=24, hour=10),
                    'end': datetime(year=2023, month=11, day=24, hour=23),
@@ -65,45 +65,45 @@ GUARDS_LIST = GuardsList(
                    'start': datetime(year=2023, month=11, day=25, hour=2),
                    'end': datetime(year=2023, month=11, day=25, hour=23),
                }]),
-     Guard('Guard', '2', partner='Guard 3'),
-     Guard('Guard', '3', partner='Guard 2', is_living_far_away=True),
-     Guard('Guard', '4'),
-     Guard('Guard', '5', partner='Guard 6', is_living_far_away=True,
-           same_time_partners=['Guard 7', 'Guard 8']),
-     Guard('Guard', '6', partner='Guard 5', is_living_far_away=True,
-           same_time_partners=['Guard 7', 'Guard 8']),
-     Guard('Guard', '7', partner='Guard 8', is_living_far_away=True,
-           same_time_partners=['Guard 5', 'Guard 6']),
-     Guard('Guard', '8', partner='Guard 7',
-           same_time_partners=['Guard 5', 'Guard 6']),
-     Guard('Guard', '9',
-           spots_preferences=list(filter(lambda spot: spot != 'Spot 1',
+     Guard('שומר', '2', partner='שומר 3'),
+     Guard('שומר', '3', partner='שומר 2', is_living_far_away=True),
+     Guard('שומר', '4'),
+     Guard('שומר', '5', partner='שומר 6', is_living_far_away=True,
+           same_time_partners=['שומר 7', 'שומר 8']),
+     Guard('שומר', '6', partner='שומר 5', is_living_far_away=True,
+           same_time_partners=['שומר 7', 'שומר 8']),
+     Guard('שומר', '7', partner='שומר 8', is_living_far_away=True,
+           same_time_partners=['שומר 5', 'שומר 6']),
+     Guard('שומר', '8', partner='שומר 7',
+           same_time_partners=['שומר 5', 'שומר 6']),
+     Guard('שומר', '9',
+           spots_preferences=list(filter(lambda spot: spot != 'עמדה 1',
                                          GUARD_SPOTS))),
-     Guard('Guard', '10', is_guarding=False),
+     Guard('שומר', '10', is_guarding=False),
      ])
 
 # List of missing guards each date (in use only if no missing guards input file)
 MISSING_GUARDS = {
-    datetime(year=2023, month=11, day=23): ['Guard 1', 'Guard 2', 'Guard 3'],
-    datetime(year=2023, month=11, day=24): ['Guard 5', 'Guard 8', 'Guard 10'],
+    datetime(year=2023, month=11, day=23): ['שומר 1', 'שומר 2', 'שומר 3'],
+    datetime(year=2023, month=11, day=24): ['שומר 5', 'שומר 8', 'שומר 10'],
 }
 
 ROOMS_LIST = [
     {
         'number': 1,
-        'guards': ['Guard 1', 'Guard 2', 'Guard 3'],
+        'guards': ['שומר 1', 'שומר 2', 'שומר 3'],
         'can_be_toran': True,
         'can_be_kitat_konenout': True,
     },
     {
         'number': 2,
-        'guards': ['Guard 5', 'Guard 8', 'Guard 10'],
+        'guards': ['שומר 5', 'שומר 8', 'שומר 10'],
         'can_be_toran': True,
         'can_be_kitat_konenout': True,
     },
     {
         'number': 3,
-        'guards': ['Guard 4', 'Guard 6', 'Guard 7', 'Guard 9'],
+        'guards': ['שומר 4', 'שומר 6', 'שומר 7', 'שומר 9'],
         'can_be_toran': False,
         'can_be_kitat_konenout': False,
     },
