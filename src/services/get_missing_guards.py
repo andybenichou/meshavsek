@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
+from config import HAPAK_HOURS, HOME_HOURS
 from guards_config import MISSING_GUARDS
 from src.models.GuardsList import GuardsList
 from src.utils.helper import get_next_dates, get_day_of_week, get_day_at_midnight
@@ -13,11 +14,17 @@ def complete_each_guard_missing_slots(missing_guards):
     for date, missing in missing_guards.items():
         weekday = get_day_of_week(date)
         for guard in missing:
-            exit_hour = 12 if not guard.is_living_far_away else 10
-            return_hour = 12 if not guard.is_living_far_away else 16
+            exit_hour = HOME_HOURS['exit']['regular'] \
+                if not guard.is_living_far_away \
+                else HOME_HOURS['exit']['far_away']
+            return_hour = HOME_HOURS['return']['regular']['week_day'] \
+                if not guard.is_living_far_away \
+                else HOME_HOURS['return']['far_away']['week_day']
 
             if weekday == 'ו':
-                return_hour = 21 if not guard.is_living_far_away else 23
+                return_hour = HOME_HOURS['return']['regular']['shabbat'] \
+                    if not guard.is_living_far_away \
+                    else HOME_HOURS['return']['far_away']['shabbat']
 
             time_obj = {
                 'start': date.replace(hour=exit_hour),
@@ -75,6 +82,7 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList,
             continue
 
         for date in missing_guards:
+            # Get custom missing hours
             if (date, 'מ12') in row:
                 if pd.notna(row[(date, 'מ12')]) \
                         and is_valid_format(row[(date, 'מ12')]):
@@ -108,10 +116,21 @@ def get_missing_guards(file_name, sheet_name, guards: GuardsList,
                 elif guard not in missing_guards[date] and is_guard_missing:
                     missing_guards[date].append(guard)
 
+                # Get HAPAK
                 if row[(next_date, 'עד 12')] == "חפ''ק":
+                    start_hapak = HAPAK_HOURS['start']['hour']
+                    end_same_day = HAPAK_HOURS['end']['same_day']
+                    end_hapak_hour = HAPAK_HOURS['end']['hour']
+
+                    if end_same_day:
+                        if end_hapak_hour <= start_hapak:
+                            end_hapak_hour = start_hapak + 1
+
                     time_obj = {
-                        'start': date.replace(hour=12),
-                        'end': (date + timedelta(days=1)).replace(hour=12)
+                        'start': date.replace(hour=start_hapak),
+                        'end': (
+                                date + timedelta(days=0 if end_same_day else 1)
+                            ).replace(hour=end_hapak_hour)
                     }
 
                     guard.add_not_available_time(time_obj['start'], time_obj['end'])
