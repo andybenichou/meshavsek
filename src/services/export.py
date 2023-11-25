@@ -7,7 +7,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, Border, Side, Alignment, PatternFill
 from openpyxl.utils.exceptions import IllegalCharacterError
 
-from config import DAY_COLUMN_NAME, HOUR_COLUMN_NAME
+from guards_config import DAY_COLUMN_NAME, HOUR_COLUMN_NAME
 from guards_config import KITOT_KONENOUT_PROPS, TORANOUT_PROPS
 
 

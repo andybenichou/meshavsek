@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from copy import deepcopy
 
-from config import MINIMAL_DELAY, PARTNER_MINIMAL_DELAY
+from guards_config import MINIMAL_DELAY, PARTNER_MINIMAL_DELAY
 from src.models.Spot import Spot
 
 

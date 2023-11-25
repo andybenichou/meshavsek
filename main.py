@@ -6,7 +6,7 @@ from copy import deepcopy, copy
 from datetime import datetime, timedelta
 from itertools import cycle
 
-from config import MINIMAL_DELAY, RANDOMNESS_LEVEL, PARTNER_MINIMAL_DELAY, \
+from guards_config import MINIMAL_DELAY, RANDOMNESS_LEVEL, PARTNER_MINIMAL_DELAY, \
     FIRST_HOUR_FIRST_DATE, LAST_HOUR_LAST_DATE, MISSING_GUARDS_FILE_NAME, \
     PREVIOUS_FILE_NAME, MISSING_GUARDS_SHEET_NAME, RETRIES_NUM_BEFORE_CRASH, \
     TRIES_NUMBER, NEW_WATCH_LIST_FILE_NAME
