@@ -58,8 +58,8 @@ HAPAK_HOURS = {
 }
 
 NEW_WATCH_LIST_FILE_NAME = 'watch_list'  # Output
-PREVIOUS_FILE_NAME = 'שבצ״ק'  # Planning input file
-MISSING_GUARDS_FILE_NAME = "פלוגה ג' - כל המידע מרוכז במקום אחד"  # Missing guard input file
+PREVIOUS_FILE_NAME = 'Previous_planning'  # Planning input file
+MISSING_GUARDS_FILE_NAME = "Guards"  # Missing guard input file
 MISSING_GUARDS_SHEET_NAME = 'כח אדם'
 DAY_COLUMN_NAME = 'יום'
 HOUR_COLUMN_NAME = 'שעה'
