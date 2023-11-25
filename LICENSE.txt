@@ -1,0 +1,57 @@
+Copyright (c) 2023, Andy Benichou
+All rights reserved.
+
+**Custom License for Private Use**
+
+Redistribution in source and binary forms, with or without modification,
+is strictly prohibited for any non-commercial or commercial purposes.
+
+**Permitted Use:**
+- Use of the software in source and binary forms, with or without modification,
+   is permitted exclusively for private and non-commercial purposes,
+   subject to the following conditions:
+      1. Private use is defined as use by an individual in a non-commercial
+          context, for non-business, non-educational, and non-governmental
+          purposes.
+      2. Use within any organization, including but not limited to businesses,
+          educational institutions, and government entities, is not permitted
+          unless explicitly authorized by the owner.
+
+**Restrictions:**
+- Redistribution, sharing, or publication of the software or
+   derivatives thereof is not permitted in any form or by any means
+   without prior written permission from the owner.
+- The software, or any derivatives thereof, may not be used for
+   commercial purposes.
+- Neither the name of the owner, "Andy Benichou", nor the names
+   of its contributors may be used to endorse or promote products derived
+   from this software without specific prior written permission from the owner.
+
+**Disclaimer:**
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+OF THE POSSIBILITY OF SUCH DAMAGE.
+
+**Jurisdiction:**
+This agreement and any disputes related to it or the use of this software
+are subject to the laws of Israel and will be resolved in its courts.
+
+**Contact and Permissions:**
+Requests for permissions, questions, or clarifications regarding this
+license should be directed to Andy Benichou, by mail 'andybenichou@gmail.com'.
+
+**Updates and Changes to License:**
+The owner reserves the right to modify the terms of this license.
+Users will be notified of significant changes through mail.
+
+By using this software, you agree to abide by the terms and conditions
+of this license.
+

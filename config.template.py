@@ -1,3 +1,23 @@
+# Copyright (c) 2023, Andy Benichou
+# All rights reserved.
+#
+# This file is part of a software project governed by the Custom License
+# for Private Use.
+# Redistribution and use in source and binary forms, with or
+# without modification, are not permitted for any non-commercial or
+# commercial purposes without prior written permission from the owner.
+#
+# This software is provided "as is", without warranty of any kind,
+# express or implied.
+# In no event shall the authors be liable for any claim, damages,
+# or other liability.
+#
+# For full license terms, see the LICENSE file in the project root
+# or contact Andy Benichou.
+#
+# Cinfug template file of the project Meshavshek
+
+
 RANDOMNESS_LEVEL = 2  # Minimum 1. Use to avoid getting always the same result (guards always with the same people), the more the randomness, the worst the rest delays can be
 MINIMAL_DELAY = 9  # Need to play with the start with the biggest delay then reduce it to get the best planning
 PARTNER_MINIMAL_DELAY = 6  # Use to define what the minimal delay to consider a partner available for the guard with its partner
