@@ -1,7 +1,7 @@
 RANDOMNESS_LEVEL = 2  # Minimum 1. Use to avoid getting always the same result (guards always with the same people), the more the randomness, the worst the rest delays can be
 MINIMAL_DELAY = 9  # Need to play with the start with the biggest delay then reduce it to get the best planning
 PARTNER_MINIMAL_DELAY = 6  # Use to define what the minimal delay to consider a partner available for the guard with its partner
-TRIES_NUMBER = 1  # Use more tries to get a better result
+TRIES_NUMBER = 10  # Use more tries to get a better result
 RETRIES_NUM_BEFORE_CRASH = 40
 
 FIRST_HOUR_FIRST_DATE = 2  # To know when the planning start for the first day
