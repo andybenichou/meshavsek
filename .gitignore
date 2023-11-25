@@ -1,4 +1,6 @@
 *.pyc
 config.py
 guards_config.py
-data/*
+data/input/פלוגה ג' - כל המידע מרוכז במקום אחד.xlsx
+data/input/שבצ״ק.xlsx
+data/output/watch_list.xlsx
