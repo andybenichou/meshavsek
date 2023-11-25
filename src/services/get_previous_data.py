@@ -4,7 +4,7 @@ from collections import defaultdict
 
 import pandas as pd
 
-from guards_config import DAY_COLUMN_NAME, HOUR_COLUMN_NAME
+from config import DAY_COLUMN_NAME, HOUR_COLUMN_NAME
 from guards_config import KITOT_KONENOUT_PROPS, TORANOUT_PROPS, \
     PREVIOUS_GUARD_SPOTS
 from src.models.Guard import Guard

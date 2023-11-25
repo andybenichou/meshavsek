@@ -7,7 +7,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, Border, Side, Alignment, PatternFill
 from openpyxl.utils.exceptions import IllegalCharacterError
 
-from guards_config import DAY_COLUMN_NAME, HOUR_COLUMN_NAME
+from config import DAY_COLUMN_NAME, HOUR_COLUMN_NAME
 from guards_config import KITOT_KONENOUT_PROPS, TORANOUT_PROPS
 
 
@@ -264,6 +264,11 @@ def export_to_excel(file_name, watch_list, guard_spots, duty_room_per_day,
     excel_path = f'data/output/{file_name}.xlsx'
     ROOT_DIR = os.environ.get('ROOT_DIR')
     full_path = os.path.join(ROOT_DIR, excel_path)
+
+    # Check if the directory exists, and create it if it doesn't
+    directory = os.path.dirname(full_path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
     df.to_excel(full_path, index=False, sheet_name='שבצ״כ')
 

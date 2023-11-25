@@ -4,7 +4,7 @@ from collections import defaultdict
 import pandas as pd
 from openpyxl import load_workbook
 
-from guards_config import DAY_COLUMN_NAME, AVAILABLE_GUARDS_COLUMN_NAME, \
+from config import DAY_COLUMN_NAME, AVAILABLE_GUARDS_COLUMN_NAME, \
     HOUR_COLUMN_NAME, AVAILABLE_GUARDS_SHEET_NAME
 from src.models.GuardsList import GuardsList
 from src.services.export import parse_date, is_row_empty, format_excel

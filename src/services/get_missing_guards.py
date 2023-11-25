@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-from guards_config import HAPAK_HOURS, HOME_HOURS
+from config import HAPAK_HOURS, HOME_HOURS
 from guards_config import MISSING_GUARDS
 from src.models.GuardsList import GuardsList
 from src.utils.helper import get_next_dates, get_day_of_week, get_day_at_midnight
