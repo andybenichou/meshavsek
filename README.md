@@ -15,11 +15,12 @@ Get started with Meshavshek in a few simple steps:
 1. Clone the project repository: `git clone git@github.com:andybenichou/meshavsek.git`
 2. Navigate to the project directory. You will find:
     - Configuration templates in the root directory. Copy, paste, and rename these by removing the '.template' extension.
-    - Input templates in the `data` folder. Use these templates to input guard details and preferences.
+    - Input templates in the `data` folder. Use these templates to input guard details and preferences. One for guards properties and one for the previous planning.
 
 ## Configuration and Usage
 
 ### Setting Up Meshavshek
+Give the previous planning to continue it, in the data/input folder.
 Customize your scheduling setup in the `config.py` and `guards_config.py` files:
 - **Randomness Level (1-10):** Introduces variability in pairing guards to prevent repetitive patterns. Note that higher randomness may impact planning efficiency.
 - **Minimal Delay:** Start with a higher delay between shifts for each guard and decrease it gradually to optimize the schedule.

@@ -139,22 +139,33 @@ class Guard:
                     # Leaves before the beginning
                     if missing_times['start'] <= guard_slot['start']:
                         # Comes back after the beginning
-                        if missing_times['end'] >= guard_slot['start']:
+                        if missing_times['end'] > guard_slot['start']:
                             return True
 
                     # Leaves after the beginning
                     if missing_times['start'] >= guard_slot['start']:
                         # But before the end
-                        if missing_times['start'] <= guard_slot['end']:
+                        if missing_times['start'] < guard_slot['end']:
                             return True
         return False
 
-    def in_time_preferences(self, date: datetime):
+    def in_time_preferences(self, date: datetime, spot=None):
         if self.time_preferences:
             in_time_preferences = False
-            for time_pref in self.time_preferences:
-                if time_pref['start'] <= date.hour < time_pref['end']:
-                    in_time_preferences = True
+
+            if spot:
+                guard_slot = spot.find_guard_slot(date)
+                if guard_slot:
+                    for time_pref in self.time_preferences:
+                        start, end = date.replace(hour=time_pref['start']), date.replace(hour=time_pref['end'])
+                        if start <= guard_slot['start'] \
+                                and end >= guard_slot['end']:
+                            in_time_preferences = True
+
+            else:
+                for time_pref in self.time_preferences:
+                    if time_pref['start'] <= date.hour < time_pref['end']:
+                        in_time_preferences = True
 
             if not in_time_preferences:
                 return False
@@ -165,7 +176,8 @@ class Guard:
     def is_available(self, watch_list, date, spot: Spot = None,
                      delays_prop=None,
                      break_no_same_consecutive_spot_rule=False,
-                     not_missing_delay=0, curr_guards=None):
+                     not_missing_delay=0, curr_guards=None,
+                     next_guards_to_place_when_available=None):
 
         if not self.is_guarding:
             return False
@@ -177,6 +189,8 @@ class Guard:
         for h in range(0, not_missing_delay + 1):
             new_date = date + timedelta(hours=h)
             if self.is_missing(new_date):
+                if next_guards_to_place_when_available:
+                    next_guards_to_place_when_available.append(self)
                 return False
 
         if self.is_missing_during_spot(spot, date):
@@ -188,7 +202,9 @@ class Guard:
                 and not break_no_same_consecutive_spot_rule:
             return False
 
-        if not self.in_time_preferences(date):
+        if not self.in_time_preferences(date, spot):
+            if next_guards_to_place_when_available:
+                next_guards_to_place_when_available.append(self)
             return False
 
         if curr_guards:
